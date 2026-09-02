@@ -34,10 +34,12 @@ function decode(value: string): string {
 }
 
 function sessionSecret(): string {
-  const explicit = process.env.ADMIN_SESSION_SECRET;
-  if (explicit && explicit.length >= 16) return explicit;
+  const explicit = (process.env.ADMIN_SESSION_SECRET ?? "").trim();
+  if (explicit.length >= 16) return explicit;
   // Fall back to deriving from the credential so a single env var is enough.
-  const derived = process.env.ADMIN_PASSWORD_HASH ?? process.env.ADMIN_PASSWORD;
+  const derived =
+    (process.env.ADMIN_PASSWORD_HASH ?? "").trim() ||
+    (process.env.ADMIN_PASSWORD ?? "").trim();
   if (derived) return `derived:${derived}`;
   return "insecure-development-secret-change-me";
 }
@@ -96,12 +98,31 @@ export async function verifySessionToken(
 }
 
 export function adminUsername(): string {
-  return process.env.ADMIN_USERNAME?.trim() || "admin";
+  return envValue("ADMIN_USERNAME") || "admin";
+}
+
+/** Environment values are trimmed: a stray newline from a paste is invisible. */
+function envValue(name: string): string {
+  return (process.env[name] ?? "").trim();
 }
 
 /** True when at least one credential env var is present. */
 export function isAdminConfigured(): boolean {
-  return Boolean(process.env.ADMIN_PASSWORD_HASH || process.env.ADMIN_PASSWORD);
+  return Boolean(envValue("ADMIN_PASSWORD_HASH") || envValue("ADMIN_PASSWORD"));
+}
+
+/**
+ * Which of the expected variables actually reached the server.
+ * Names and presence only — never values — so it is safe to show on the
+ * login screen while the site is still being set up.
+ */
+export function adminEnvReport(): { name: string; present: boolean; required: boolean }[] {
+  return [
+    { name: "ADMIN_PASSWORD_HASH", present: Boolean(envValue("ADMIN_PASSWORD_HASH")), required: false },
+    { name: "ADMIN_PASSWORD", present: Boolean(envValue("ADMIN_PASSWORD")), required: false },
+    { name: "ADMIN_SESSION_SECRET", present: Boolean(envValue("ADMIN_SESSION_SECRET")), required: false },
+    { name: "ADMIN_USERNAME", present: Boolean(envValue("ADMIN_USERNAME")), required: false },
+  ];
 }
 
 /** Builds the value for ADMIN_PASSWORD_HASH from a plain password. */
@@ -125,16 +146,18 @@ export async function verifyCredentials(
   if (!isAdminConfigured()) return false;
   if (!constantTimeEquals(username.trim(), adminUsername())) return false;
 
-  const hash = process.env.ADMIN_PASSWORD_HASH;
+  // Either credential is accepted, so setting both is not a trap.
+  const hash = envValue("ADMIN_PASSWORD_HASH");
   if (hash) {
     const [scheme, saltHex, digestHex] = hash.split(":");
-    if (scheme !== "scrypt" || !saltHex || !digestHex) return false;
-    const derived = await scrypt(password, Buffer.from(saltHex, "hex"), 64);
-    return constantTimeEquals(derived.toString("hex"), digestHex);
+    if (scheme === "scrypt" && saltHex && digestHex) {
+      const derived = await scrypt(password, Buffer.from(saltHex, "hex"), 64);
+      if (constantTimeEquals(derived.toString("hex"), digestHex)) return true;
+    }
   }
 
-  const plain = process.env.ADMIN_PASSWORD;
-  return Boolean(plain) && constantTimeEquals(password, plain as string);
+  const plain = envValue("ADMIN_PASSWORD");
+  return Boolean(plain) && constantTimeEquals(password, plain);
 }
 
 /** Simple in-process throttle — enough to blunt password guessing. */
