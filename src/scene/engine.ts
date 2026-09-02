@@ -164,7 +164,7 @@ export function createSceneEngine(
     // as scratches.
     if (!usePhoto) layers.push(createForegroundLayer());
     layers.push(createParticleLayer());
-    if (options.holidayThemes) layers.push(createHolidayLayer());
+    if (options.holidayThemes) layers.push(createHolidayLayer({ anchored: usePhoto }));
   }
 
   function resize() {

@@ -17,6 +17,7 @@ type Particle = {
   spin: number;
   size: number;
   tone: number;
+  silhouette: boolean;
   life: number;
   maxLife: number;
   /** Phase for flutter and blinking. */
@@ -35,7 +36,15 @@ export function createParticleLayer(): Layer {
   const random = mulberry32(77);
   let spawnAccumulator = 0;
 
-  function spawn(frame: Frame, kind: Kind, x?: number, y?: number, tone?: number, size?: number) {
+  function spawn(
+    frame: Frame,
+    kind: Kind,
+    x?: number,
+    y?: number,
+    tone?: number,
+    size?: number,
+    silhouette = false,
+  ) {
     if (particles.length >= MAX_BY_QUALITY[frame.quality]) return;
     const px = x ?? random() * frame.width * 1.2 - frame.width * 0.1;
     const py = y ?? -frame.height * 0.05 * random();
@@ -50,6 +59,7 @@ export function createParticleLayer(): Layer {
       spin: (random() - 0.5) * 3,
       size: size ?? 3,
       tone: tone ?? random(),
+      silhouette,
       life: 0,
       maxLife: 40,
       phase: random() * Math.PI * 2,
@@ -237,7 +247,9 @@ export function createParticleLayer(): Layer {
         break;
       }
       case "fruit": {
-        const color: RGB = frame.season === "autumn" ? [122, 84, 44] : [92, 108, 52];
+        const color: RGB = particle.silhouette
+          ? [26, 26, 24]
+          : frame.season === "autumn" ? [122, 84, 44] : [92, 108, 52];
         ctx.fillStyle = css(
           mix(color, lighting.sunColor, 0.2 * lighting.sunIntensity),
           clamp(0.9 * fade * (0.3 + lighting.ambientIntensity)),
@@ -248,8 +260,9 @@ export function createParticleLayer(): Layer {
         break;
       }
       default: {
-        const color =
-          particle.kind === "petal"
+        const color = particle.silhouette
+          ? mix([22, 24, 22], [40, 38, 30], particle.tone)
+          : particle.kind === "petal"
             ? mix([248, 226, 236], [236, 200, 216], particle.tone)
             : particle.kind === "needle"
               ? mix([76, 92, 58], [58, 74, 48], particle.tone)
@@ -257,10 +270,12 @@ export function createParticleLayer(): Layer {
         ctx.save();
         ctx.translate(particle.x, particle.y);
         ctx.rotate(particle.angle);
-        ctx.fillStyle = css(
-          mix(color, lighting.sunColor, 0.22 * lighting.sunIntensity),
-          clamp(0.92 * fade * (0.3 + lighting.ambientIntensity)),
-        );
+        ctx.fillStyle = particle.silhouette
+          ? css(color, clamp(0.8 * fade))
+          : css(
+              mix(color, lighting.sunColor, 0.22 * lighting.sunIntensity),
+              clamp(0.92 * fade * (0.3 + lighting.ambientIntensity)),
+            );
         ctx.beginPath();
         if (particle.kind === "needle") {
           ctx.rect(-particle.size * 0.08, -particle.size, particle.size * 0.16, particle.size * 2);
@@ -280,7 +295,10 @@ export function createParticleLayer(): Layer {
     update(frame) {
       // Anything the forest shook loose this frame.
       for (const request of drainSpawns()) {
-        spawn(frame, request.kind, request.x, request.y, request.tone, request.size);
+        spawn(
+          frame, request.kind, request.x, request.y, request.tone, request.size,
+          request.silhouette,
+        );
       }
 
       // Weather and ambient life are kept topped up to a target population.

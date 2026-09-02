@@ -1,5 +1,6 @@
 import { clamp, mulberry32 } from "../noise";
 import { css, mix, type RGB } from "../palette";
+import { houseAnchors } from "../photoScene";
 import type { Frame, Layer } from "../types";
 
 type Spark = {
@@ -21,7 +22,7 @@ const GREEK_WHITE: RGB = [244, 246, 248];
 const HOLIDAY_SEED = 325;
 
 /** National days, Christmas, New Year and Easter dress the scene. */
-export function createHolidayLayer(): Layer {
+export function createHolidayLayer({ anchored = false } = {}): Layer {
   let sparks: Spark[] = [];
   let fireworks: Firework[] = [];
   let candles: Candle[] = [];
@@ -34,28 +35,66 @@ export function createHolidayLayer(): Layer {
   function build(frame: Frame) {
     const random = mulberry32(HOLIDAY_SEED);
 
-    poles = Array.from({ length: frame.quality === "low" ? 2 : 4 }, () => ({
-      x: frame.width * (0.1 + random() * 0.8),
-      y: frame.groundY + frame.height * (0.01 + random() * 0.03),
-      h: frame.height * (0.09 + random() * 0.05),
-    }));
-
-    lightStrings = Array.from({ length: frame.quality === "low" ? 3 : 6 }, () => {
-      const x1 = frame.width * random() * 0.9;
-      return {
-        x1,
-        y1: frame.groundY + frame.height * (0.005 + random() * 0.03),
-        x2: x1 + frame.width * (0.08 + random() * 0.12),
-        y2: frame.groundY + frame.height * (0.005 + random() * 0.03),
+    if (anchored) {
+      // Decorations belong on the houses in the photograph, at the scale those
+      // houses actually are — not floating over the valley.
+      const houses = houseAnchors(frame.width, frame.height, frame.groundY);
+      const pick = (count: number) => {
+        const step = Math.max(1, Math.floor(houses.length / count));
+        return houses.filter((_, i) => i % step === 0).slice(0, count);
       };
-    });
 
-    candles = Array.from({ length: frame.quality === "low" ? 12 : 30 }, () => ({
-      x: frame.width * (0.3 + random() * 0.35),
-      y: frame.groundY + frame.height * (0.02 + random() * 0.045),
-      drift: (random() - 0.5) * 0.4,
-      phase: random() * Math.PI * 2,
-    }));
+      poles = pick(frame.quality === "low" ? 3 : 6).map((house) => ({
+        x: house.x,
+        y: house.y,
+        h: frame.height * (0.024 + random() * 0.012),
+      }));
+
+      // A short string of lights along the eaves of a house.
+      lightStrings = pick(frame.quality === "low" ? 6 : 14).map((house) => {
+        const span = frame.width * (0.012 + random() * 0.012);
+        return {
+          x1: house.x - span / 2,
+          y1: house.y,
+          x2: house.x + span / 2,
+          y2: house.y + (random() - 0.5) * frame.height * 0.002,
+        };
+      });
+
+      const churchside = houses[Math.floor(houses.length / 2)] ?? {
+        x: frame.width / 2,
+        y: frame.groundY,
+      };
+      candles = Array.from({ length: frame.quality === "low" ? 10 : 24 }, () => ({
+        x: churchside.x + (random() - 0.5) * frame.width * 0.09,
+        y: churchside.y + (random() - 0.5) * frame.height * 0.012,
+        drift: (random() - 0.5) * 0.25,
+        phase: random() * Math.PI * 2,
+      }));
+    } else {
+      poles = Array.from({ length: frame.quality === "low" ? 2 : 4 }, () => ({
+        x: frame.width * (0.1 + random() * 0.8),
+        y: frame.groundY + frame.height * (0.01 + random() * 0.03),
+        h: frame.height * (0.09 + random() * 0.05),
+      }));
+
+      lightStrings = Array.from({ length: frame.quality === "low" ? 3 : 6 }, () => {
+        const x1 = frame.width * random() * 0.9;
+        return {
+          x1,
+          y1: frame.groundY + frame.height * (0.005 + random() * 0.03),
+          x2: x1 + frame.width * (0.08 + random() * 0.12),
+          y2: frame.groundY + frame.height * (0.005 + random() * 0.03),
+        };
+      });
+
+      candles = Array.from({ length: frame.quality === "low" ? 12 : 30 }, () => ({
+        x: frame.width * (0.3 + random() * 0.35),
+        y: frame.groundY + frame.height * (0.02 + random() * 0.045),
+        drift: (random() - 0.5) * 0.4,
+        phase: random() * Math.PI * 2,
+      }));
+    }
 
     sparks = [];
     fireworks = [];
@@ -124,15 +163,18 @@ export function createHolidayLayer(): Layer {
     ];
 
     for (const [index, string] of lightStrings.entries()) {
-      const bulbs = 12;
+      const bulbs = anchored ? 6 : 12;
       ctx.strokeStyle = `rgba(40,40,44,${(0.5 * glow).toFixed(3)})`;
       ctx.lineWidth = 1;
       ctx.beginPath();
       for (let i = 0; i <= bulbs; i++) {
         const t = i / bulbs;
         const x = string.x1 + (string.x2 - string.x1) * t;
-        const sag = Math.sin(t * Math.PI) * frame.height * 0.012;
-        const sway = Math.sin(frame.time * 1.2 + t * 3 + index) * frame.wind.force * frame.height * 0.006;
+        const sag = Math.sin(t * Math.PI) * frame.height * (anchored ? 0.002 : 0.012);
+        const sway =
+          Math.sin(frame.time * 1.2 + t * 3 + index) *
+          frame.wind.force *
+          frame.height * (anchored ? 0.0012 : 0.006);
         const y = string.y1 + (string.y2 - string.y1) * t + sag + sway;
         if (i === 0) ctx.moveTo(x, y);
         else ctx.lineTo(x, y);
@@ -142,13 +184,16 @@ export function createHolidayLayer(): Layer {
       for (let i = 0; i <= bulbs; i++) {
         const t = i / bulbs;
         const x = string.x1 + (string.x2 - string.x1) * t;
-        const sag = Math.sin(t * Math.PI) * frame.height * 0.012;
-        const sway = Math.sin(frame.time * 1.2 + t * 3 + index) * frame.wind.force * frame.height * 0.006;
+        const sag = Math.sin(t * Math.PI) * frame.height * (anchored ? 0.002 : 0.012);
+        const sway =
+          Math.sin(frame.time * 1.2 + t * 3 + index) *
+          frame.wind.force *
+          frame.height * (anchored ? 0.0012 : 0.006);
         const y = string.y1 + (string.y2 - string.y1) * t + sag + sway;
         const color = colors[(i + index) % colors.length];
         const twinkle = 0.55 + 0.45 * Math.sin(frame.time * 2.4 + i * 0.9 + index);
         const alpha = clamp(glow * twinkle);
-        const radius = frame.height * 0.0035;
+        const radius = frame.height * (anchored ? 0.0013 : 0.0035);
 
         const halo = ctx.createRadialGradient(x, y, 0, x, y, radius * 6);
         halo.addColorStop(0, css(color, alpha * 0.55));
@@ -173,7 +218,7 @@ export function createHolidayLayer(): Layer {
       const lean = frame.wind.force * 0.35;
       const x = candle.x + Math.sin(frame.time * 0.4 + candle.phase) * candle.drift * frame.width * 0.01;
       const y = candle.y;
-      const radius = frame.height * 0.02 * flicker;
+      const radius = frame.height * (anchored ? 0.006 : 0.02) * flicker;
 
       const halo = ctx.createRadialGradient(x, y, 0, x, y, radius);
       halo.addColorStop(0, `rgba(255,206,132,${(0.5 * presence * flicker).toFixed(3)})`);
@@ -187,9 +232,9 @@ export function createHolidayLayer(): Layer {
       ctx.beginPath();
       ctx.ellipse(
         x + lean * frame.height * 0.004,
-        y - frame.height * 0.004,
-        frame.height * 0.0016,
-        frame.height * 0.004 * flicker,
+        y - frame.height * (anchored ? 0.0016 : 0.004),
+        frame.height * (anchored ? 0.0007 : 0.0016),
+        frame.height * (anchored ? 0.0016 : 0.004) * flicker,
         lean * 0.5, 0, Math.PI * 2,
       );
       ctx.fill();

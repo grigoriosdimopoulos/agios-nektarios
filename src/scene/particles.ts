@@ -11,6 +11,8 @@ export type SpawnRequest = {
   /** 0–1 index into the season's foliage palette. */
   tone: number;
   size: number;
+  /** Shed by a branch close to the lens: seen as a dark shape, not a colour. */
+  silhouette?: boolean;
 };
 
 const queue: SpawnRequest[] = [];

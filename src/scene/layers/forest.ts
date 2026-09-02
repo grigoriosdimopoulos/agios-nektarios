@@ -48,6 +48,7 @@ function buildBranch(
   width: number,
   restAngle: number,
   conifer: boolean,
+  fine = false,
 ): Branch {
   const children: Branch[] = [];
   const clusters: LeafCluster[] = [];
@@ -68,6 +69,7 @@ function buildBranch(
           width * 0.62,
           angle,
           conifer,
+          fine,
         ),
       );
     }
@@ -76,12 +78,15 @@ function buildBranch(
   // Foliage hangs off the outer two levels so the canopy reads as a mass
   // rather than as a few blobs stuck on the tips.
   if (leafy) {
-    const clusterCount = conifer ? 6 : 8;
+    // A branch close to the lens shows individual leaves, not a single mass,
+    // so the fine variant scatters many small ones along its length.
+    const clusterCount = fine ? (conifer ? 26 : 22) : conifer ? 6 : 8;
+    const radiusFactor = fine ? 0.1 : conifer ? 0.3 : 0.4;
     for (let i = 0; i < clusterCount; i++) {
       clusters.push({
-        dx: (random() - 0.5) * length * 0.85,
-        dy: -length * (0.05 + random() * 0.75),
-        r: length * (conifer ? 0.3 : 0.4) * (0.6 + random() * 0.7),
+        dx: (random() - 0.5) * length * (fine ? 1.15 : 0.85),
+        dy: -length * (fine ? random() * 1.05 : 0.05 + random() * 0.75),
+        r: length * radiusFactor * (0.55 + random() * 0.9),
         phase: random() * Math.PI * 2,
         tone: random(),
       });
@@ -222,6 +227,10 @@ export function createForestLayer(
   let width = 0;
   let height = 0;
 
+  // Used only for the overhead framing branches.
+  const blurCanvas = typeof document === "undefined" ? null : document.createElement("canvas");
+  const blurCtx = blurCanvas?.getContext("2d") ?? null;
+
   function build(frame: Frame) {
     const random = mulberry32(FOREST_SEED);
     const sizeFactor = clamp(frame.height / 900, 0.6, 1.5);
@@ -248,7 +257,9 @@ export function createForestLayer(
         band,
         depth,
         conifer,
-        root: buildBranch(random, 0, maxDepth, trunkLength, trunkWidth, rootAngle, conifer),
+        root: buildBranch(
+          random, 0, maxDepth, trunkLength, trunkWidth, rootAngle, conifer, overhead,
+        ),
         dropCooldown: random() * 6,
       };
     };
@@ -360,7 +371,8 @@ export function createForestLayer(
           y: canopyY + (Math.random() - 0.5) * spread * 0.7,
           kind: ripe ? "fruit" : tree.conifer ? "needle" : foliage.blossom > 0.2 ? "petal" : "leaf",
           tone: Math.random(),
-          size: (ripe ? 3.4 : 4.6) * tree.scale,
+          size: (ripe ? 2.6 : 3.4) * tree.scale,
+          silhouette,
         });
       }
     },
@@ -369,6 +381,23 @@ export function createForestLayer(
       const litFactor = 0.22 + 0.95 * lighting.ambientIntensity;
 
       if (drawTreelineBand) drawTreeline(ctx, frame);
+
+      // Overhead branches are painted on their own surface and then laid down
+      // with a defocus blur, the way a foreground branch actually appears.
+      let target = ctx;
+      const defocus = overhead && blurCanvas && blurCtx;
+      if (defocus) {
+        const dpr = Math.min(window.devicePixelRatio || 1, 2);
+        const w = Math.max(1, Math.round(frame.width * dpr));
+        const h = Math.max(1, Math.round(frame.height * dpr));
+        if (blurCanvas.width !== w || blurCanvas.height !== h) {
+          blurCanvas.width = w;
+          blurCanvas.height = h;
+        }
+        blurCtx.setTransform(dpr, 0, 0, dpr, 0, 0);
+        blurCtx.clearRect(0, 0, frame.width, frame.height);
+        target = blurCtx;
+      }
 
       for (const tree of trees) {
         const foliage = tree.conifer
@@ -407,7 +436,7 @@ export function createForestLayer(
             : null;
 
         // Ground shadow first, so the trunk sits on top of it.
-        if (lighting.sunIntensity > 0.06 && tree.band === "near") {
+        if (lighting.sunIntensity > 0.06 && tree.band === "near" && !defocus) {
           const direction = frame.sunScreen.x < frame.width / 2 ? 1 : -1;
           const lengthFactor = 1 + 3.4 * lighting.goldenFactor;
           ctx.save();
@@ -425,10 +454,10 @@ export function createForestLayer(
           ctx.restore();
         }
 
-        ctx.save();
-        ctx.translate(tree.x, tree.baseY);
+        target.save();
+        target.translate(tree.x, tree.baseY);
         drawBranch(
-          ctx,
+          target,
           tree.root,
           css(bark),
           foliage,
@@ -436,6 +465,13 @@ export function createForestLayer(
           snow,
           frame.quality !== "low" && tree.band !== "mid",
         );
+        target.restore();
+      }
+
+      if (defocus) {
+        ctx.save();
+        ctx.filter = `blur(${(frame.height * 0.0055).toFixed(1)}px)`;
+        ctx.drawImage(blurCanvas, 0, 0, frame.width, frame.height);
         ctx.restore();
       }
     },

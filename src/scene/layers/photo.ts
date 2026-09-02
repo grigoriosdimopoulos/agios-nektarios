@@ -1,6 +1,6 @@
 import { clamp, mulberry32, smoothstep } from "../noise";
 import { css, mix, scale, type RGB } from "../palette";
-import { HOUSE_LIGHTS, PHOTO_PLATES } from "../photoScene";
+import { HOUSE_LIGHTS, PHOTO_PLATES, ridgeBox } from "../photoScene";
 import type { Frame, Layer } from "../types";
 
 type Band = "ridge" | "forest";
@@ -40,6 +40,9 @@ export function createPhotoLayer(band: Band): Layer {
   }));
 
   function geometry(frame: Frame) {
+    if (band === "ridge") {
+      return ridgeBox(frame.width, frame.height, frame.groundY);
+    }
     const layout = LAYOUT[band];
     const drawWidth = frame.width * layout.overscan;
     const drawHeight = drawWidth / plate.aspect;

@@ -47,7 +47,7 @@ export function createWildlifeLayer(): Layer {
 
     // Owls perch in the framing trees at the edges of the frame, never in
     // mid-air over the village.
-    owls = Array.from({ length: frame.quality === "low" ? 1 : 2 }, (_, index) => {
+    owls = Array.from({ length: 1 }, (_, index) => {
       const perchX =
         index % 2 === 0
           ? frame.width * (0.83 + random() * 0.08)
@@ -60,14 +60,14 @@ export function createWildlifeLayer(): Layer {
         x: perchX,
         y: perchY,
         glide: 0,
-        glideTimer: 20 + random() * 45,
+        glideTimer: 60 + random() * 120,
         headTurn: 0,
         headTarget: 0,
         blink: 0,
       };
     });
 
-    bats = Array.from({ length: frame.quality === "low" ? 3 : 7 }, () => ({
+    bats = Array.from({ length: frame.quality === "low" ? 2 : 4 }, () => ({
       x: random() * frame.width,
       y: frame.horizonY * (0.5 + random() * 0.4),
       vx: (random() - 0.5) * frame.width * 0.12,
@@ -75,9 +75,10 @@ export function createWildlifeLayer(): Layer {
       flap: random() * Math.PI * 2,
     }));
 
-    flutterers = Array.from({ length: frame.quality === "low" ? 4 : 9 }, () => ({
+    flutterers = Array.from({ length: frame.quality === "low" ? 3 : 6 }, () => ({
       x: random() * frame.width,
-      y: frame.groundY - frame.height * random() * 0.09,
+      // Down in the foreground, where something this small could be seen.
+      y: frame.height * (0.82 + random() * 0.16),
       phase: random() * Math.PI * 2,
       speed: 0.4 + random() * 0.9,
       hue: random(),
@@ -167,12 +168,13 @@ export function createWildlifeLayer(): Layer {
 
   function drawBirds(ctx: CanvasRenderingContext2D, frame: Frame) {
     if (!flockActive) return;
-    const size = Math.max(3, frame.width * 0.005);
+    // At the distance of the ridge a bird is a speck, not a silhouette.
+    const size = Math.max(1.8, frame.width * 0.0024);
     ctx.strokeStyle = css(
       mix([28, 30, 34], frame.lighting.hazeColor, 0.3),
       0.75 * (0.3 + frame.lighting.dayFactor),
     );
-    ctx.lineWidth = Math.max(1, size * 0.2);
+    ctx.lineWidth = Math.max(0.8, size * 0.28);
     ctx.lineCap = "round";
 
     for (const bird of flock) {
@@ -189,7 +191,7 @@ export function createWildlifeLayer(): Layer {
       owl.glideTimer -= frame.dt;
       if (owl.glideTimer <= 0 && owl.glide === 0) {
         owl.glide = Math.random() < 0.5 ? -1 : 1;
-        owl.glideTimer = 34 + Math.random() * 50;
+        owl.glideTimer = 90 + Math.random() * 140;
       }
 
       if (owl.glide !== 0) {
@@ -218,7 +220,7 @@ export function createWildlifeLayer(): Layer {
 
   function drawOwls(ctx: CanvasRenderingContext2D, frame: Frame, presence: number) {
     if (presence <= 0.05) return;
-    const size = Math.max(6, frame.height * 0.016);
+    const size = Math.max(3.5, frame.height * 0.0075);
     const body: RGB = mix([62, 52, 44], frame.lighting.moonColor, 0.22 * frame.lighting.moonIntensity);
 
     for (const owl of owls) {
@@ -295,8 +297,8 @@ export function createWildlifeLayer(): Layer {
 
   function drawBats(ctx: CanvasRenderingContext2D, frame: Frame, presence: number) {
     if (presence <= 0.05) return;
-    const size = Math.max(2.5, frame.width * 0.004);
-    ctx.fillStyle = css([18, 18, 24], 0.72 * presence);
+    const size = Math.max(1.6, frame.width * 0.0022);
+    ctx.fillStyle = css([18, 18, 24], 0.6 * presence);
     for (const bat of bats) {
       const beat = Math.abs(Math.sin(bat.flap));
       ctx.beginPath();
@@ -310,7 +312,7 @@ export function createWildlifeLayer(): Layer {
 
   function drawFlutterers(ctx: CanvasRenderingContext2D, frame: Frame, presence: number) {
     if (presence <= 0.05) return;
-    const size = Math.max(2, frame.height * 0.004);
+    const size = Math.max(1.8, frame.height * 0.0032);
     for (const one of flutterers) {
       one.x += (Math.sin(frame.time * one.speed + one.phase) * frame.width * 0.02 + frame.wind.speed * 4) * frame.dt;
       one.y += Math.cos(frame.time * one.speed * 1.7 + one.phase) * frame.height * 0.012 * frame.dt;

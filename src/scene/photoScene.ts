@@ -17,6 +17,29 @@ export const PHOTO_PLATES = {
 
 export type PhotoLight = { x: number; y: number };
 
+/** Where the ridge plate lands on screen — shared by the backdrop and the
+ *  decorations that have to sit on the houses in it. */
+export function ridgeBox(width: number, height: number, groundY: number) {
+  const drawWidth = width * 1.06;
+  const drawHeight = drawWidth / PHOTO_PLATES.ridge.aspect;
+  const bottom = groundY + height * 0.17;
+  return {
+    left: (width - drawWidth) / 2,
+    top: bottom - drawHeight,
+    drawWidth,
+    drawHeight,
+  };
+}
+
+/** The photographed houses, in screen coordinates. */
+export function houseAnchors(width: number, height: number, groundY: number) {
+  const box = ridgeBox(width, height, groundY);
+  return HOUSE_LIGHTS.map((light) => ({
+    x: box.left + light.x * box.drawWidth,
+    y: box.top + light.y * box.drawHeight,
+  }));
+}
+
 export const HOUSE_LIGHTS: PhotoLight[] = [
   { x: 0.029, y: 0.7955 },
   { x: 0.0487, y: 0.8 },
