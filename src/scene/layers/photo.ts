@@ -1,6 +1,8 @@
 import { clamp, mulberry32, smoothstep } from "../noise";
 import { css, mix, scale, type RGB } from "../palette";
 import { HOUSE_LIGHTS, PHOTO_PLATES, ridgeBox } from "../photoScene";
+
+const PHOTO_ASPECT_RIDGE = PHOTO_PLATES.ridge.aspect;
 import type { Frame, Layer } from "../types";
 
 type Band = "ridge" | "forest";
@@ -40,11 +42,23 @@ export function createPhotoLayer(band: Band): Layer {
   }));
 
   function geometry(frame: Frame) {
+    // A very slow push-in, about one percent over a minute and a half. Too
+    // small to notice as movement, enough that the frame is not a still.
+    const breath = 1 + 0.012 * (0.5 - 0.5 * Math.cos((frame.time / 90) * Math.PI * 2));
+    const drift = band === "forest" ? breath * 1.004 : breath;
+
     if (band === "ridge") {
-      return ridgeBox(frame.width, frame.height, frame.groundY);
+      const box = ridgeBox(frame.width, frame.height, frame.groundY);
+      const grow = (drift - 1) * box.drawWidth;
+      return {
+        left: box.left - grow / 2,
+        top: box.top - (grow / PHOTO_ASPECT_RIDGE) / 2,
+        drawWidth: box.drawWidth + grow,
+        drawHeight: box.drawHeight + grow / PHOTO_ASPECT_RIDGE,
+      };
     }
     const layout = LAYOUT[band];
-    const drawWidth = frame.width * layout.overscan;
+    const drawWidth = frame.width * layout.overscan * drift;
     const drawHeight = drawWidth / plate.aspect;
     const left = (frame.width - drawWidth) / 2;
     const bottom = frame.groundY + frame.height * layout.baseOffset;
@@ -169,10 +183,20 @@ export function createPhotoLayer(band: Band): Layer {
   return {
     name: `photo-${band}`,
     draw(ctx, frame) {
+      if (band === "ridge") {
+        // A dark base under the horizon: if a plate is still loading, the
+        // viewer sees dusk, never a hole through to the sky.
+        const base = ctx.createLinearGradient(0, frame.horizonY, 0, frame.height);
+        base.addColorStop(0, css(scale(frame.lighting.horizon, 0.42), 1));
+        base.addColorStop(1, css(scale(frame.lighting.horizon, 0.2), 1));
+        ctx.fillStyle = base;
+        ctx.fillRect(0, frame.horizonY, frame.width, frame.height - frame.horizonY);
+      }
+
       if (!image.complete || image.naturalWidth === 0 || !octx) return;
 
       const box = geometry(frame);
-      const key = `${Math.round(box.drawWidth)}x${Math.round(box.drawHeight)}|${lightingKey(frame)}`;
+      const key = `${Math.round(box.drawWidth / 12)}|${lightingKey(frame)}`;
       const now = performance.now();
       if (gradedKey === "" || (key !== gradedKey && now - gradedAt > 400)) {
         regrade(frame, box);

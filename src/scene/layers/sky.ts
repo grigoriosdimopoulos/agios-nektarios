@@ -9,7 +9,7 @@ type Cloud = { x: number; y: number; scale: number; depth: number; puffs: Puff[]
 const STAR_SEED = 20241109;
 
 /** Sky dome: gradient, stars, moon, sun, clouds and the haze above the ridge. */
-export function createSkyLayer(): Layer {
+export function createSkyLayer({ softClouds = false } = {}): Layer {
   let stars: Star[] = [];
   let clouds: Cloud[] = [];
   let width = 0;
@@ -213,18 +213,25 @@ export function createSkyLayer(): Layer {
         0.35 * lighting.dayFactor,
       );
       const litColor = mix(bodyColor, lighting.sunColor, 0.4 * lighting.sunIntensity);
-      const alpha = clamp((0.16 + cover * 0.6) * (0.55 + cloud.depth * 0.55));
+      const alpha =
+        clamp((0.16 + cover * 0.6) * (0.55 + cloud.depth * 0.55)) *
+        (softClouds ? 0.42 : 1);
+
+      // Beside a photograph, a crisp cartoon puff is the giveaway. Real cloud
+      // at this distance is a soft, wide, low-contrast bank.
+      const spreadX = softClouds ? 3.4 : 1;
+      const spreadR = softClouds ? 2.6 : 1;
 
       for (const puff of cloud.puffs) {
-        const px = x + puff.dx * cloud.scale;
+        const px = x + puff.dx * cloud.scale * spreadX;
         const py = y + puff.dy * cloud.scale;
-        const r = puff.r * cloud.scale;
+        const r = puff.r * cloud.scale * spreadR;
         const gradient = ctx.createRadialGradient(
           px + r * 0.3 * litSide, py - r * 0.35, r * 0.1,
           px, py, r,
         );
         gradient.addColorStop(0, css(litColor, alpha));
-        gradient.addColorStop(0.55, css(bodyColor, alpha * 0.72));
+        gradient.addColorStop(softClouds ? 0.3 : 0.55, css(bodyColor, alpha * 0.6));
         gradient.addColorStop(1, css(bodyColor, 0));
         ctx.fillStyle = gradient;
         ctx.beginPath();

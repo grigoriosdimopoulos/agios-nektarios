@@ -22,7 +22,7 @@ const GREEK_WHITE: RGB = [244, 246, 248];
 const HOLIDAY_SEED = 325;
 
 /** National days, Christmas, New Year and Easter dress the scene. */
-export function createHolidayLayer({ anchored = false } = {}): Layer {
+export function createHolidayLayer({ anchored = false, lightsOnly = false } = {}): Layer {
   let sparks: Spark[] = [];
   let fireworks: Firework[] = [];
   let candles: Candle[] = [];
@@ -156,9 +156,9 @@ export function createHolidayLayer({ anchored = false } = {}): Layer {
     ctx.restore();
   }
 
-  function drawChristmas(ctx: CanvasRenderingContext2D, frame: Frame) {
+  function drawChristmas(ctx: CanvasRenderingContext2D, frame: Frame, palette?: RGB[]) {
     const glow = 0.25 + 0.75 * frame.lighting.artificialLight;
-    const colors: RGB[] = [
+    const colors: RGB[] = palette ?? [
       [255, 96, 80], [255, 208, 116], [120, 220, 150], [130, 176, 255], [246, 160, 230],
     ];
 
@@ -335,7 +335,10 @@ export function createHolidayLayer({ anchored = false } = {}): Layer {
       switch (frame.holiday) {
         case "independence":
         case "ohi":
-          for (const pole of poles) drawFlag(ctx, frame, pole);
+          // A drawn flag next to a photograph is a sticker. On the photo the
+          // national days are marked by blue and white lamps in the village.
+          if (lightsOnly) drawChristmas(ctx, frame, [GREEK_BLUE, GREEK_WHITE]);
+          else for (const pole of poles) drawFlag(ctx, frame, pole);
           break;
         case "christmas":
           drawChristmas(ctx, frame);
@@ -345,6 +348,8 @@ export function createHolidayLayer({ anchored = false } = {}): Layer {
           drawFireworks(ctx, frame);
           break;
         case "easter":
+          // Candles are light, so they survive next to a photograph; they are
+          // simply small and gathered by the church.
           drawCandles(
             ctx,
             frame,

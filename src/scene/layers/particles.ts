@@ -31,7 +31,7 @@ const MAX_BY_QUALITY = { low: 140, medium: 320, high: 620 } as const;
  * Everything that falls, drifts or blinks: rain, snow, leaves shaken loose by
  * the wind, blossom, acorns, summer fireflies and daytime motes.
  */
-export function createParticleLayer(): Layer {
+export function createParticleLayer({ weatherOnly = false } = {}): Layer {
   const particles: Particle[] = [];
   const random = mulberry32(77);
   let spawnAccumulator = 0;
@@ -293,8 +293,10 @@ export function createParticleLayer(): Layer {
   return {
     name: "particles",
     update(frame) {
-      // Anything the forest shook loose this frame.
-      for (const request of drainSpawns()) {
+      // Anything the forest shook loose this frame. With the photograph in
+      // place there is no drawn tree to shed anything, and a leaf big enough
+      // to see at that distance would be the size of a car.
+      for (const request of weatherOnly ? [] : drainSpawns()) {
         spawn(
           frame, request.kind, request.x, request.y, request.tone, request.size,
           request.silhouette,
@@ -305,7 +307,10 @@ export function createParticleLayer(): Layer {
       spawnAccumulator += frame.dt;
       if (spawnAccumulator > 0.05) {
         spawnAccumulator = 0;
-        for (const kind of ["rain", "snow", "firefly", "mote"] as const) {
+        const ambient = weatherOnly
+          ? (["rain", "snow"] as const)
+          : (["rain", "snow", "firefly", "mote"] as const);
+        for (const kind of ambient) {
           const target = targetCount(frame, kind);
           if (target <= 0) continue;
           const current = particles.reduce(

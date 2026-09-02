@@ -13,6 +13,7 @@ import { createParticleLayer } from "./layers/particles";
 import { createWildlifeLayer } from "./layers/wildlife";
 import { createHolidayLayer } from "./layers/holiday";
 import { createForegroundLayer } from "./layers/foreground";
+import { createCameraLayer } from "./layers/camera";
 import { createPlateLayer } from "./layers/plates";
 import { createPhotoLayer } from "./layers/photo";
 
@@ -136,39 +137,39 @@ export function createSceneEngine(
     const usePhoto = !customGround;
 
     layers.length = 0;
-    layers.push(createSkyLayer());
+    layers.push(createSkyLayer({ softClouds: usePhoto }));
     if (options.plates.sky) layers.push(createPlateLayer(options.plates, "sky"));
-    layers.push(createTerrainLayer({ ridges: !usePhoto }));
 
     if (usePhoto) {
+      // Nothing is drawn on top of the photograph. Anything with an outline —
+      // a tree, a bird, a flag — announces itself as a drawing the moment it
+      // sits next to real pixels, so the scene is carried entirely by the
+      // photograph, the light on it, and what a camera would actually record:
+      // weather in the air and lamps coming on in the windows.
       layers.push(createPhotoLayer("ridge"));
-    } else {
-      layers.push(createPlateLayer(options.plates, "ground"));
+      layers.push(createPhotoLayer("forest"));
+      layers.push(createParticleLayer({ weatherOnly: true }));
+      if (options.holidayThemes) {
+        layers.push(createHolidayLayer({ anchored: true, lightsOnly: true }));
+      }
+      return;
     }
 
-    // With the photograph in place its own houses and pine wood are the real
-    // thing, so the drawn village and slope trees stand down.
-    if (options.village && !usePhoto) layers.push(createVillageLayer());
-    layers.push(
-      createForestLayer({
-        treeline: !usePhoto,
-        slope: !usePhoto,
-        silhouette: usePhoto,
-        overhead: usePhoto,
-      }),
-    );
-    if (usePhoto) layers.push(createPhotoLayer("forest"));
-
+    layers.push(createTerrainLayer());
+    layers.push(createPlateLayer(options.plates, "ground"));
+    if (options.village) layers.push(createVillageLayer());
+    layers.push(createForestLayer());
     if (options.wildlife) layers.push(createWildlifeLayer());
-    // The photograph already has a foreground; drawn grass on top of it reads
-    // as scratches.
-    if (!usePhoto) layers.push(createForegroundLayer());
+    layers.push(createForegroundLayer());
     layers.push(createParticleLayer());
-    if (options.holidayThemes) layers.push(createHolidayLayer({ anchored: usePhoto }));
+    if (options.holidayThemes) layers.push(createHolidayLayer());
   }
 
+  const camera = createCameraLayer();
+
   function resize() {
-    const dpr = Math.min(window.devicePixelRatio || 1, quality === "low" ? 1.5 : 2);
+    // Every pass here is a full-screen blend, so pixel count is the budget.
+    const dpr = Math.min(window.devicePixelRatio || 1, quality === "low" ? 1 : 1.5);
     const width = canvas.clientWidth || window.innerWidth;
     const height = canvas.clientHeight || window.innerHeight;
     canvas.width = Math.round(width * dpr);
@@ -267,7 +268,7 @@ export function createSceneEngine(
     flash = Math.max(0, flash - next.dt * 3.4);
   }
 
-  function grade(next: Frame) {
+  function atmosphere(next: Frame) {
     const { lighting } = next;
 
     // Ground fog sits in the valley on humid, still mornings.
@@ -286,22 +287,16 @@ export function createSceneEngine(
       ctx.fillRect(0, 0, next.width, next.height);
     }
 
-    // A light vignette, deeper at night; daylight is left bright.
-    const dark = 1 - lighting.dayFactor;
-    const vignette = ctx.createRadialGradient(
-      next.width / 2, next.height * 0.45, next.height * 0.25,
-      next.width / 2, next.height * 0.5, next.height * 0.95,
-    );
-    vignette.addColorStop(0, "rgba(4,5,7,0)");
-    vignette.addColorStop(1, `rgba(4,5,7,${(0.16 + 0.26 * dark).toFixed(3)})`);
-    ctx.fillStyle = vignette;
-    ctx.fillRect(0, 0, next.width, next.height);
+    // Vignette and grain belong to the camera pass, which runs after this.
+  }
 
-    // Just enough of a floor tint to keep body text legible over the ground.
-    const legibility = ctx.createLinearGradient(0, next.height * 0.55, 0, next.height);
-    legibility.addColorStop(0, "rgba(7,8,9,0)");
-    legibility.addColorStop(1, `rgba(7,8,9,${(0.16 + 0.34 * dark).toFixed(3)})`);
-    ctx.fillStyle = legibility;
+  /** Applied last, so text stays readable over the image. */
+  function legibility(next: Frame) {
+    const dark = 1 - next.lighting.dayFactor;
+    const floor = ctx.createLinearGradient(0, next.height * 0.55, 0, next.height);
+    floor.addColorStop(0, "rgba(7,8,9,0)");
+    floor.addColorStop(1, `rgba(7,8,9,${(0.16 + 0.32 * dark).toFixed(3)})`);
+    ctx.fillStyle = floor;
     ctx.fillRect(0, next.height * 0.55, next.width, next.height * 0.45);
   }
 
@@ -314,7 +309,9 @@ export function createSceneEngine(
     ctx.fillStyle = css(next.lighting.zenith);
     ctx.fillRect(0, 0, next.width, next.height);
     for (const layer of layers) layer.draw(ctx, next);
-    grade(next);
+    atmosphere(next);
+    camera.draw(ctx, next);
+    legibility(next);
   }
 
   function tick(timestamp: number) {
