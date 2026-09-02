@@ -23,7 +23,7 @@ type Branch = {
   phase: number;
 };
 
-type Band = "near" | "mid";
+type Band = "near" | "mid" | "canopy";
 
 type Tree = {
   x: number;
@@ -208,7 +208,15 @@ function drawBranch(
  * slope, and two or three big trees framing the edges of the frame. Every
  * branch is a damped spring, so the whole wood leans and settles with the wind.
  */
-export function createForestLayer(): Layer {
+export function createForestLayer(
+  {
+    treeline: drawTreelineBand = true,
+    slope: drawSlopeTrees = true,
+    silhouette = false,
+    /** Hang the framing trees from the top edge instead of standing them up. */
+    overhead = false,
+  } = {},
+): Layer {
   let trees: Tree[] = [];
   let treeline: { x: number; y: number; h: number; w: number }[] = [];
   let width = 0;
@@ -218,25 +226,29 @@ export function createForestLayer(): Layer {
     const random = mulberry32(FOREST_SEED);
     const sizeFactor = clamp(frame.height / 900, 0.6, 1.5);
 
-    const make = (band: Band, x: number, depth: number): Tree => {
+    const make = (band: Band, x: number, depth: number, rootAngle = 0): Tree => {
       const conifer = random() < (band === "near" ? 0.4 : 0.62);
+      const framing = band !== "mid";
       const treeScale =
-        (band === "near" ? 0.85 + random() * 0.45 : 0.3 + random() * 0.4) * sizeFactor;
-      const maxDepth = band === "near" ? (frame.quality === "high" ? 5 : 4) : 3;
-      const trunkLength = frame.height * (band === "near" ? 0.1 : 0.05) * treeScale;
+        (framing ? 0.85 + random() * 0.45 : 0.3 + random() * 0.4) * sizeFactor;
+      const maxDepth = framing ? (frame.quality === "high" ? 5 : 4) : 3;
+      const trunkLength =
+        frame.height * (band === "canopy" ? 0.075 : framing ? 0.1 : 0.05) * treeScale;
       const trunkWidth = Math.max(1.3, trunkLength * (conifer ? 0.05 : 0.07));
 
       return {
         x,
         baseY:
-          band === "near"
-            ? frame.groundY + frame.height * (0.09 + random() * 0.08)
-            : frame.groundY + frame.height * (random() * 0.05 - 0.012),
+          band === "canopy"
+            ? -frame.height * 0.03
+            : band === "near"
+              ? frame.groundY + frame.height * (0.09 + random() * 0.08)
+              : frame.groundY + frame.height * (random() * 0.05 - 0.012),
         scale: treeScale,
         band,
         depth,
         conifer,
-        root: buildBranch(random, 0, maxDepth, trunkLength, trunkWidth, 0, conifer),
+        root: buildBranch(random, 0, maxDepth, trunkLength, trunkWidth, rootAngle, conifer),
         dropCooldown: random() * 6,
       };
     };
@@ -252,15 +264,22 @@ export function createForestLayer(): Layer {
 
     // Framing trees: kept to the right edge and the far left so the title and
     // the village stay readable between them.
-    const near: Tree[] = [
-      make("near", frame.width * (0.97 + random() * 0.1), 0.95),
-      make("near", frame.width * (-0.05 + random() * 0.06), 0.9),
-    ];
-    if (frame.quality !== "low") {
-      near.push(make("near", frame.width * (0.85 + random() * 0.05), 0.8));
-    }
+    // Over a photograph the framing trees become branches reaching in from the
+    // top corners, the way a real foreground branch frames a view.
+    const near: Tree[] = overhead
+      ? [
+          make("canopy", frame.width * (0.06 + random() * 0.06), 0.95, 2.5),
+          make("canopy", frame.width * (0.9 + random() * 0.06), 0.9, -2.5),
+        ]
+      : [
+          make("near", frame.width * (0.97 + random() * 0.1), 0.95),
+          make("near", frame.width * (-0.05 + random() * 0.06), 0.9),
+          ...(frame.quality !== "low"
+            ? [make("near", frame.width * (0.85 + random() * 0.05), 0.8)]
+            : []),
+        ];
 
-    trees = [...mid, ...near].sort((a, b) => a.baseY - b.baseY);
+    trees = [...(drawSlopeTrees ? mid : []), ...near].sort((a, b) => a.baseY - b.baseY);
 
     // Distant treeline hugging the ridge: silhouettes only.
     const lineCount = frame.quality === "low" ? 40 : 110;
@@ -317,7 +336,7 @@ export function createForestLayer(): Layer {
 
         // Shedding: autumn drops constantly, and a gust shakes leaves loose in
         // any season. Fruit falls when it is ripe.
-        if (tree.band !== "near") continue;
+        if (tree.band === "mid") continue;
         tree.dropCooldown -= frame.dt;
         if (tree.dropCooldown > 0) continue;
 
@@ -349,7 +368,7 @@ export function createForestLayer(): Layer {
       const { lighting } = frame;
       const litFactor = 0.22 + 0.95 * lighting.ambientIntensity;
 
-      drawTreeline(ctx, frame);
+      if (drawTreelineBand) drawTreeline(ctx, frame);
 
       for (const tree of trees) {
         const foliage = tree.conifer
@@ -358,18 +377,27 @@ export function createForestLayer(): Layer {
 
         // Distance fades everything toward the haze; near trees stay saturated.
         const haze = clamp((1 - tree.depth) * (0.5 + lighting.hazeDensity * 0.5));
-        const bark: RGB = mix(scale([52, 40, 33], litFactor), lighting.hazeColor, haze);
-        const canopyBase: RGB = mix(
-          mix(scale(foliage.canopy, litFactor), lighting.sunColor, 0.18 * lighting.sunIntensity),
-          lighting.hazeColor,
-          haze,
-        );
+        // In front of a photograph a stylised green canopy reads as a cartoon,
+        // so the framing trees are rendered as near-black shapes instead —
+        // which is what a close, backlit tree actually looks like.
+        const bark: RGB = silhouette
+          ? mix([14, 16, 15], lighting.ambient, 0.12 * lighting.ambientIntensity)
+          : mix(scale([52, 40, 33], litFactor), lighting.hazeColor, haze);
+        const canopyBase: RGB = silhouette
+          ? mix([18, 22, 18], lighting.ambient, 0.16 * lighting.ambientIntensity)
+          : mix(
+              mix(scale(foliage.canopy, litFactor), lighting.sunColor, 0.18 * lighting.sunIntensity),
+              lighting.hazeColor,
+              haze,
+            );
         const paint: CanopyPaint = {
-          shadow: css(scale(canopyBase, 0.68), 0.95),
-          base: css(canopyBase, 0.95),
+          shadow: css(scale(canopyBase, 0.68), silhouette ? 0.99 : 0.95),
+          base: css(canopyBase, silhouette ? 0.99 : 0.95),
           lit: css(
-            mix(scale(canopyBase, 1.28), lighting.sunColor, 0.28 * lighting.sunIntensity),
-            0.85,
+            silhouette
+              ? scale(canopyBase, 1.35)
+              : mix(scale(canopyBase, 1.28), lighting.sunColor, 0.28 * lighting.sunIntensity),
+            silhouette ? 0.6 : 0.85,
           ),
           blossom: css(mix([246, 232, 238], lighting.sunColor, 0.3 * lighting.sunIntensity)),
         };
@@ -406,7 +434,7 @@ export function createForestLayer(): Layer {
           foliage,
           paint,
           snow,
-          frame.quality !== "low" && tree.band === "near",
+          frame.quality !== "low" && tree.band !== "mid",
         );
         ctx.restore();
       }

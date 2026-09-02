@@ -52,7 +52,8 @@ export function createWildlifeLayer(): Layer {
         index % 2 === 0
           ? frame.width * (0.83 + random() * 0.08)
           : frame.width * (0.02 + random() * 0.07);
-      const perchY = frame.groundY - frame.height * (0.03 + random() * 0.05);
+      // Down among the trees at the front of the frame, not hovering in mid-air.
+      const perchY = frame.groundY + frame.height * (0.14 + random() * 0.1);
       return {
         perchX,
         perchY,
@@ -201,7 +202,7 @@ export function createWildlifeLayer(): Layer {
             Math.random() < 0.5
               ? frame.width * (0.83 + Math.random() * 0.08)
               : frame.width * (0.02 + Math.random() * 0.07);
-          owl.perchY = frame.groundY - frame.height * (0.03 + Math.random() * 0.05);
+          owl.perchY = frame.groundY + frame.height * (0.14 + Math.random() * 0.1);
           owl.x = owl.perchX;
           owl.y = owl.perchY;
         }

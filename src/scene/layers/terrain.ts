@@ -27,7 +27,7 @@ const GROUND: Record<Season, RGB> = {
  * The Kithairon ridge lines and the ground the village sits on.
  * Geometry is generated once per size; only the lighting changes per frame.
  */
-export function createTerrainLayer(): Layer {
+export function createTerrainLayer({ ridges: drawRidges = true } = {}): Layer {
   let ridges: Ridge[] = [];
   let ground: GroundPoint[] = [];
   let width = 0;
@@ -155,7 +155,7 @@ export function createTerrainLayer(): Layer {
         build(frame);
       }
 
-      for (const ridge of ridges) drawRidge(ctx, frame, ridge);
+      if (drawRidges) for (const ridge of ridges) drawRidge(ctx, frame, ridge);
 
       // The plateau the settlement stands on.
       const { lighting } = frame;

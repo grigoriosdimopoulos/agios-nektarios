@@ -14,6 +14,7 @@ import { createWildlifeLayer } from "./layers/wildlife";
 import { createHolidayLayer } from "./layers/holiday";
 import { createForegroundLayer } from "./layers/foreground";
 import { createPlateLayer } from "./layers/plates";
+import { createPhotoLayer } from "./layers/photo";
 
 export type Overrides = {
   time: "auto" | "dawn" | "day" | "dusk" | "night";
@@ -127,17 +128,41 @@ export function createSceneEngine(
   const layers: Layer[] = [];
 
   function rebuildLayers() {
+    const customGround = Boolean(
+      options.plates.far || options.plates.mid || options.plates.near,
+    );
+    // The built-in photograph of the settlement is the default backdrop; it
+    // steps aside as soon as the administrator uploads their own plates.
+    const usePhoto = !customGround;
+
     layers.length = 0;
     layers.push(createSkyLayer());
     if (options.plates.sky) layers.push(createPlateLayer(options.plates, "sky"));
-    layers.push(createTerrainLayer());
-    if (options.plates.far || options.plates.mid || options.plates.near) {
+    layers.push(createTerrainLayer({ ridges: !usePhoto }));
+
+    if (usePhoto) {
+      layers.push(createPhotoLayer("ridge"));
+    } else {
       layers.push(createPlateLayer(options.plates, "ground"));
     }
-    if (options.village) layers.push(createVillageLayer());
-    layers.push(createForestLayer());
+
+    // With the photograph in place its own houses and pine wood are the real
+    // thing, so the drawn village and slope trees stand down.
+    if (options.village && !usePhoto) layers.push(createVillageLayer());
+    layers.push(
+      createForestLayer({
+        treeline: !usePhoto,
+        slope: !usePhoto,
+        silhouette: usePhoto,
+        overhead: usePhoto,
+      }),
+    );
+    if (usePhoto) layers.push(createPhotoLayer("forest"));
+
     if (options.wildlife) layers.push(createWildlifeLayer());
-    layers.push(createForegroundLayer());
+    // The photograph already has a foreground; drawn grass on top of it reads
+    // as scratches.
+    if (!usePhoto) layers.push(createForegroundLayer());
     layers.push(createParticleLayer());
     if (options.holidayThemes) layers.push(createHolidayLayer());
   }
