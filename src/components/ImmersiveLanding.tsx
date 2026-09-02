@@ -3,18 +3,17 @@
 import { duration, ease } from "@/design/motion";
 import { AnimatePresence, motion } from "framer-motion";
 import { useEffect, useState } from "react";
+import type { HomeContent } from "@/lib/content/schema";
 import { AtmosphericField } from "./AtmosphericField";
 import { DepthLayer } from "./DepthLayer";
 import { ParticleField } from "./ParticleField";
 
-const TICKER =
-  "ΚΟΙΝΟΤΗΤΑ — ΙΣΤΟΡΙΑ — ΛΑΟΓΡΑΦΙΑ — ΚΙΘΑΙΡΩΝΑΣ — ΒΙΛΙΑ — ΦΥΣΗ — ΜΝΗΜΗ — ΠΟΛΙΤΙΣΜΟΣ — " +
-  "ΚΟΙΝΟΤΗΤΑ — ΙΣΤΟΡΙΑ — ΛΑΟΓΡΑΦΙΑ — ΚΙΘΑΙΡΩΝΑΣ — ΒΙΛΙΑ — ΦΥΣΗ — ΜΝΗΜΗ — ΠΟΛΙΤΙΣΜΟΣ — ";
+type Props = { hero: HomeContent["hero"]; sceneEnabled: boolean };
 
-const WORDS = ["ΆΓΙΟΣ", "ΝΕΚΤΆΡΙΟΣ"];
-
-export function ImmersiveLanding() {
+export function ImmersiveLanding({ hero, sceneEnabled }: Props) {
   const [ready, setReady] = useState(false);
+  const words = [hero.titleTop, hero.titleBottom];
+  const ticker = `${hero.ticker}${hero.ticker}`;
 
   useEffect(() => {
     const t = window.setTimeout(() => setReady(true), 80);
@@ -24,13 +23,21 @@ export function ImmersiveLanding() {
   return (
     <section
       data-hero-section
-      className="relative min-h-[100dvh] overflow-hidden bg-[#070809]"
+      className={`relative min-h-[100dvh] overflow-hidden ${sceneEnabled ? "bg-transparent" : "bg-[#070809]"}`}
       aria-label="Εισαγωγική ενότητα"
     >
-      <AtmosphericField variant="hero" />
+      {!sceneEnabled && <AtmosphericField variant="hero" />}
 
       {/* Canvas particles — dust rising */}
-      <ParticleField count={40} className="z-[2]" />
+      {!sceneEnabled && <ParticleField count={40} className="z-[2]" />}
+
+      {/* Reading scrim so the title holds up over a bright midday sky */}
+      {sceneEnabled && (
+        <div
+          className="pointer-events-none absolute inset-0 z-[2] bg-[radial-gradient(85%_65%_at_20%_40%,rgba(6,8,11,0.5)_0%,rgba(6,8,11,0.2)_45%,transparent_78%)]"
+          aria-hidden
+        />
+      )}
 
       {/* Cursor spotlight — pure CSS, zero React re-renders */}
       <div
@@ -38,8 +45,10 @@ export function ImmersiveLanding() {
         aria-hidden
       />
 
-      {/* Terrain silhouettes */}
-      <div className="pointer-events-none absolute inset-x-0 bottom-0 z-[1] h-[50vh]">
+      {/* Terrain silhouettes — the living scene draws its own ridge line */}
+      <div
+        className={`pointer-events-none absolute inset-x-0 bottom-0 z-[1] h-[50vh] ${sceneEnabled ? "hidden" : ""}`}
+      >
         <DepthLayer factor={0.22} className="absolute inset-0">
           <svg viewBox="0 0 1440 280" preserveAspectRatio="none" className="h-full w-full" aria-hidden>
             <path
@@ -66,17 +75,17 @@ export function ImmersiveLanding() {
         transition={{ duration: 1.1, delay: 0.2, ease: ease.outSoft }}
         className="relative z-[4] flex items-center justify-between px-6 pt-28 text-[0.58rem] font-medium uppercase tracking-[0.38em] text-[rgba(232,228,214,0.22)] md:px-12 md:pt-32"
       >
-        <span>N° 1970</span>
-        <span className="hidden md:inline">Εξωραϊστικός Σύλλογος Βιλίων</span>
-        <span>650 m alt.</span>
+        <span>{hero.metaLeft}</span>
+        <span className="hidden md:inline">{hero.metaCenter}</span>
+        <span>{hero.metaRight}</span>
       </motion.div>
 
       {/* Title — curtain/masking reveal (premium word-by-word) */}
       <div className="relative z-[4] px-5 pt-10 md:px-12 md:pt-14">
         <h1 className="font-display select-none text-[clamp(4.8rem,15vw,12rem)] font-medium leading-[0.84] tracking-[-0.06em]">
           <AnimatePresence>
-            {WORDS.map((word, i) => (
-              <div key={word} className="overflow-hidden">
+            {words.map((word, i) => (
+              <div key={`${word}-${i}`} className="overflow-hidden">
                 <motion.span
                   className={`block ${i === 1 ? "text-[rgba(232,228,214,0.58)]" : "text-[var(--ivory)]"}`}
                   initial={{ y: "110%", opacity: 0, filter: "blur(8px)" }}
@@ -102,8 +111,7 @@ export function ImmersiveLanding() {
         >
           <div className="mt-[0.65rem] h-px w-10 shrink-0 bg-gradient-to-r from-[rgba(154,123,82,0.65)] to-transparent" />
           <p className="max-w-[42ch] font-body text-[0.92rem] leading-[1.9] text-[rgba(232,228,214,0.44)] md:text-[0.98rem]">
-            Τόπος ησυχίας, μνήμης και κοινότητας στους πρόποδες του
-            Κιθαιρώνα. Δυτική Αττική.
+            {hero.intro}
           </p>
         </motion.div>
       </div>
@@ -116,7 +124,7 @@ export function ImmersiveLanding() {
         className="relative z-[4] mt-20 overflow-hidden border-t border-[rgba(232,228,214,0.048)] py-3.5"
       >
         <p className="marquee-track whitespace-nowrap font-body text-[0.58rem] uppercase tracking-[0.32em] text-[rgba(232,228,214,0.17)]" aria-hidden>
-          {TICKER}
+          {ticker}
         </p>
       </motion.div>
 

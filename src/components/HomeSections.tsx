@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { LEGACY_ORIGIN } from "@/lib/legacyOrigin";
+import type { BoardMember, HomeContent, LinkItem, StatItem } from "@/lib/content/schema";
 import { motion, useReducedMotion } from "framer-motion";
 import { AtmosphericField } from "./AtmosphericField";
 import { SectionTransition } from "./SectionTransition";
@@ -12,34 +12,12 @@ const ttl = "font-display font-medium leading-[1.18] tracking-tight text-[var(--
 const bdy = "font-body text-[0.95rem] leading-[1.95] text-[rgba(232,228,214,0.62)] md:text-[1.01rem]";
 const panel = "rounded-[2px] border border-[rgba(232,228,214,0.052)] bg-[rgba(10,12,15,0.55)] p-7 md:p-9";
 
-// ── Data ───────────────────────────────────────────────────────────────────────
-const STATS = [
-  { value: "1970", label: "Ίδρυση" },
-  { value: "372.300", label: "Στρέμματα" },
-  { value: "650m", label: "Υψόμετρο" },
-  { value: "130+", label: "Κατοικίες" },
-];
-
-const FOLKLORE = [
-  { num: "001", title: "Ο Άγιος Νεκτάριος", sub: "Ο προστάτης του τόπου", href: "/Agios_Nektarios" },
-  { num: "002", title: "Ο Άγιος Φανούριος", sub: "Λαϊκή παράδοση", href: "/Agios_Fanourios" },
-  { num: "003", title: "Η Αγία Μαρίνα", sub: "Τοπική λατρεία", href: "/Agia_Marina" },
-  { num: "004", title: "Ο Όσιος Μελέτιος", sub: "Ιστορία & πίστη", href: "/Under-Construction" },
-  { num: "005", title: "Ο Ηρακλής", sub: "Μυθολογία Κιθαιρώνα", href: "/Hercules" },
-  { num: "006", title: "Οι Ερινύες", sub: "Αρχαία μυθολογία", href: "/The-Furies" },
-  { num: "007", title: "Φρούριο Αιγοσθενών", sub: "Αρχαιολογικό μνημείο", href: "/Egosthena_Fortress" },
-  { num: "008", title: "Κάστρο Ελευθερών", sub: "Βυζαντινή ιστορία", href: "/Eleftheres_Castle" },
-  { num: "009", title: "Ο Κιθαιρώνας", sub: "Το βουνό μας", href: "/Under-Construction" },
-];
-
-const NEWS = [
-  { label: "Πνευματικό & Πολιτιστικό Κέντρο", href: "/PPKnews", ext: false },
-  { label: "Νέα Τρίκλιτου Ναού", href: "/Church-news", ext: false },
-  { label: "Δήμος Μάνδρας-Ειδυλλίας", href: "https://mandras-eidyllias.gr/", ext: true },
-];
+function isExternal(item: LinkItem): boolean {
+  return item.external ?? /^https?:/i.test(item.href);
+}
 
 // ── Stat item with animated number ─────────────────────────────────────────────
-function StatItem({ value, label, index }: { value: string; label: string; index: number }) {
+function StatItem({ value, label, index }: StatItem & { index: number }) {
   const reduced = useReducedMotion();
   return (
     <motion.div
@@ -60,7 +38,7 @@ function StatItem({ value, label, index }: { value: string; label: string; index
 }
 
 // ── Folklore row with magnetic hover ──────────────────────────────────────────
-function FolkloreRow({ item, index }: { item: (typeof FOLKLORE)[0]; index: number }) {
+function FolkloreRow({ item, index }: { item: LinkItem; index: number }) {
   const reduced = useReducedMotion();
   return (
     <motion.div
@@ -102,10 +80,25 @@ function FolkloreRow({ item, index }: { item: (typeof FOLKLORE)[0]; index: numbe
   );
 }
 
-// ── Main component ─────────────────────────────────────────────────────────────
-export function HomeSections() {
+function BoardRow({ member }: { member: BoardMember }) {
   return (
-    <div className="relative overflow-hidden bg-[linear-gradient(180deg,#0e1013_0%,#0a0c0e_28%,#080a0c_100%)] pb-36">
+    <li>
+      <span className="text-[rgba(232,228,214,0.38)] text-[0.7rem] uppercase tracking-widest">
+        {member.role}
+      </span>
+      <br />
+      {member.name}
+    </li>
+  );
+}
+
+// ── Main component ─────────────────────────────────────────────────────────────
+export function HomeSections({ content }: { content: HomeContent }) {
+  const { stats, essence, settlement, folklore, event, board, documents, news, contact } =
+    content;
+
+  return (
+    <div className="relative overflow-hidden bg-[linear-gradient(180deg,rgba(14,16,19,0.92)_0%,rgba(10,12,14,0.94)_28%,rgba(8,10,12,0.96)_100%)] pb-36">
       <AtmosphericField className="opacity-45" />
       <div className="pointer-events-none absolute bottom-0 left-0 right-0 h-56 bg-gradient-to-t from-[var(--void)] to-transparent" />
 
@@ -114,8 +107,8 @@ export function HomeSections() {
         {/* ── Stats ───────────────────────────────────────────────────── */}
         <div className="border-b border-[rgba(232,228,214,0.052)] py-16">
           <div className="grid grid-cols-2 md:grid-cols-4">
-            {STATS.map((s, i) => (
-              <StatItem key={s.label} value={s.value} label={s.label} index={i} />
+            {stats.map((s, i) => (
+              <StatItem key={`${s.label}-${i}`} value={s.value} label={s.label} index={i} />
             ))}
           </div>
         </div>
@@ -123,11 +116,11 @@ export function HomeSections() {
         {/* ── Essence ─────────────────────────────────────────────────── */}
         <SectionTransition className="py-28 text-center md:py-36">
           <p className={`${ttl} mx-auto max-w-xl text-[1.6rem] leading-[1.42] md:text-[2.05rem]`}>
-            Ένας τόπος όπου η φύση,
+            {essence.lineOne}
             <br />
-            <span className="text-[rgba(232,228,214,0.52)] italic">η μνήμη και η κοινότητα</span>
+            <span className="text-[rgba(232,228,214,0.52)] italic">{essence.lineTwo}</span>
             <br />
-            μιλούν με ησυχία.
+            {essence.lineThree}
           </p>
           <motion.div
             initial={{ scaleX: 0 }}
@@ -142,66 +135,65 @@ export function HomeSections() {
         <SectionTransition className="pb-24 md:pb-32">
           <div className="grid gap-14 lg:grid-cols-[1fr_1.15fr] lg:items-start">
             <div>
-              <p className={lbl}>Τοποθεσία</p>
-              <h2 className={`${ttl} mt-3 text-[1.7rem] md:text-[2rem]`}>Ο Οικισμός Μας</h2>
-              <p className={`${bdy} mt-6`}>
-                Ο οικισμός βρίσκεται στους πρόποδες του όρους Κιθαιρώνα,
-                απέναντι από το όρος Πατέρα, στη θέση &quot;Μαγκούλεζα&quot;
-                της κτηματικής περιφέρειας του Δήμου Βιλίων,
-                σε υψόμετρο 650–700 μέτρων.
-              </p>
-              <p className={`${bdy} mt-5`}>
-                Ιδρύθηκε το 1970 σε έκταση 372.300 στρεμμάτων. Σήμερα αριθμεί
-                πάνω από 130 κατοικίες και αποτελεί έναν ζωντανό οικισμό με
-                αστική τηλεφωνία, ασφαλτοστρωμένους δρόμους και έναν
-                τρισυπόστατο ναό.
-              </p>
-              <div className="mt-8">
-                <Link
-                  href="/readmore-index-center"
-                  className="group inline-flex items-center gap-3 font-body text-sm text-[rgba(232,228,214,0.5)] transition-colors duration-400 hover:text-[var(--ivory)]"
-                >
-                  Διαβάστε περισσότερα
-                  <motion.span
-                    className="text-[rgba(154,123,82,0.65)]"
-                    whileHover={{ x: 3 }}
-                    transition={{ duration: 0.2 }}
+              <p className={lbl}>{settlement.label}</p>
+              <h2 className={`${ttl} mt-3 text-[1.7rem] md:text-[2rem]`}>{settlement.title}</h2>
+              {settlement.paragraphs.map((paragraph, i) => (
+                <p key={i} className={`${bdy} ${i === 0 ? "mt-6" : "mt-5"}`}>
+                  {paragraph}
+                </p>
+              ))}
+              {settlement.moreHref && (
+                <div className="mt-8">
+                  <Link
+                    href={settlement.moreHref}
+                    className="group inline-flex items-center gap-3 font-body text-sm text-[rgba(232,228,214,0.5)] transition-colors duration-400 hover:text-[var(--ivory)]"
                   >
-                    →
-                  </motion.span>
-                </Link>
-              </div>
+                    {settlement.moreLabel}
+                    <motion.span
+                      className="text-[rgba(154,123,82,0.65)]"
+                      whileHover={{ x: 3 }}
+                      transition={{ duration: 0.2 }}
+                    >
+                      →
+                    </motion.span>
+                  </Link>
+                </div>
+              )}
             </div>
 
-            <motion.div
-              className={panel}
-              whileInView={{ opacity: 1 }}
-              initial={{ opacity: 0 }}
-              viewport={{ once: true }}
-              transition={{ duration: 1.0, ease: [0.16, 1, 0.3, 1], delay: 0.15 }}
-            >
-              <div className="overflow-hidden rounded-[2px] border border-[rgba(232,228,214,0.06)]">
-                <iframe
-                  title="Χάρτης Αγίου Νεκταρίου"
-                  width="100%"
-                  height="300"
-                  loading="lazy"
-                  referrerPolicy="no-referrer-when-downgrade"
-                  className="opacity-88"
-                  src="https://maps.google.gr/maps?hl=el&ie=UTF8&t=h&ll=38.162535,23.291316&spn=0.01181,0.018239&z=15&output=embed"
-                />
-              </div>
-              <p className="mt-4">
-                <a
-                  href="https://maps.google.gr/maps?hl=el&ie=UTF8&t=h&ll=38.162535,23.291316&spn=0.01181,0.018239&z=15&source=embed"
-                  className="font-body text-[0.76rem] text-[rgba(232,228,214,0.38)] underline decoration-[rgba(154,123,82,0.22)] underline-offset-4 transition hover:text-[rgba(232,228,214,0.65)]"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                >
-                  Μεγαλύτερος χάρτης →
-                </a>
-              </p>
-            </motion.div>
+            {settlement.mapEmbedUrl && (
+              <motion.div
+                className={panel}
+                whileInView={{ opacity: 1 }}
+                initial={{ opacity: 0 }}
+                viewport={{ once: true }}
+                transition={{ duration: 1.0, ease: [0.16, 1, 0.3, 1], delay: 0.15 }}
+              >
+                <div className="overflow-hidden rounded-[2px] border border-[rgba(232,228,214,0.06)]">
+                  <iframe
+                    title="Χάρτης Αγίου Νεκταρίου"
+                    width="100%"
+                    height="300"
+                    loading="lazy"
+                    referrerPolicy="no-referrer-when-downgrade"
+                    className="opacity-88"
+                    src={settlement.mapEmbedUrl}
+                  />
+                </div>
+                {settlement.mapLinkUrl && (
+                  <p className="mt-4">
+                    <a
+                      href={settlement.mapLinkUrl}
+                      className="font-body text-[0.76rem] text-[rgba(232,228,214,0.38)] underline decoration-[rgba(154,123,82,0.22)] underline-offset-4 transition hover:text-[rgba(232,228,214,0.65)]"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                    >
+                      Μεγαλύτερος χάρτης →
+                    </a>
+                  </p>
+                )}
+              </motion.div>
+            )}
           </div>
         </SectionTransition>
 
@@ -209,54 +201,53 @@ export function HomeSections() {
         <SectionTransition className="pb-24 md:pb-32">
           <div className="mb-8 flex items-end justify-between border-b border-[rgba(232,228,214,0.052)] pb-6">
             <div>
-              <p className={lbl}>Λαογραφικά &amp; Ιστορία</p>
-              <h2 className={`${ttl} mt-3 text-[1.7rem] md:text-[2rem]`}>Τόπος &amp; Μύθος</h2>
+              <p className={lbl}>{folklore.label}</p>
+              <h2 className={`${ttl} mt-3 text-[1.7rem] md:text-[2rem]`}>{folklore.title}</h2>
             </div>
             <span className="hidden font-body text-[0.7rem] text-[rgba(232,228,214,0.25)] md:block">
-              {FOLKLORE.length} κεφάλαια
+              {folklore.items.length} κεφάλαια
             </span>
           </div>
           <div>
-            {FOLKLORE.map((item, i) => (
-              <FolkloreRow key={item.num} item={item} index={i} />
+            {folklore.items.map((item, i) => (
+              <FolkloreRow key={`${item.href}-${i}`} item={item} index={i} />
             ))}
           </div>
         </SectionTransition>
 
-        {/* ── Κοπή Πίτας ──────────────────────────────────────────────── */}
+        {/* ── Εκδήλωση ────────────────────────────────────────────────── */}
         <SectionTransition className="pb-24 md:pb-32">
           <div className="grid gap-10 lg:grid-cols-[0.88fr_1.12fr] lg:items-center lg:gap-14">
             <div className={panel}>
-              <p className={lbl}>Εκδηλώσεις 2026</p>
-              <h2 className={`${ttl} mt-3 text-[1.55rem] md:text-[1.8rem]`}>Κοπή Πίτας</h2>
-              <p className={`${bdy} mt-5`}>
-                Η ετήσια εκδήλωση του Συλλόγου που ενώνει τους οικιστούς και
-                κρατά ζωντανή την παράδοση.
-              </p>
-              <a
-                href={`${LEGACY_ORIGIN}/Pita2026.pdf`}
-                className="mt-6 inline-flex items-center gap-2 font-body text-sm text-[rgba(154,123,82,0.8)] transition hover:text-[rgba(232,228,214,0.88)]"
-                target="_blank"
-                rel="noopener noreferrer"
-              >
-                <span>Προσκλητήριο PDF</span>
-                <span>↗</span>
-              </a>
+              <p className={lbl}>{event.label}</p>
+              <h2 className={`${ttl} mt-3 text-[1.55rem] md:text-[1.8rem]`}>{event.title}</h2>
+              <p className={`${bdy} mt-5`}>{event.text}</p>
+              {event.linkHref && (
+                <a
+                  href={event.linkHref}
+                  className="mt-6 inline-flex items-center gap-2 font-body text-sm text-[rgba(154,123,82,0.8)] transition hover:text-[rgba(232,228,214,0.88)]"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  <span>{event.linkLabel}</span>
+                  <span>↗</span>
+                </a>
+              )}
             </div>
-            <motion.div
-              className="overflow-hidden rounded-[2px] border border-[rgba(232,228,214,0.045)] shadow-[0_18px_52px_rgba(0,0,0,0.28)]"
-              whileHover={{ scale: 1.015 }}
-              transition={{ duration: 0.6, ease: [0.16, 1, 0.3, 1] }}
-            >
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img
-                src={`${LEGACY_ORIGIN}/Pita2026.jpg`}
-                alt="Κοπή πίτας 2026"
-                width={570}
-                height={400}
-                className="h-auto w-full opacity-88"
-              />
-            </motion.div>
+            {event.imageUrl && (
+              <motion.div
+                className="overflow-hidden rounded-[2px] border border-[rgba(232,228,214,0.045)] shadow-[0_18px_52px_rgba(0,0,0,0.28)]"
+                whileHover={{ scale: 1.015 }}
+                transition={{ duration: 0.6, ease: [0.16, 1, 0.3, 1] }}
+              >
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={event.imageUrl}
+                  alt={event.title}
+                  className="h-auto w-full opacity-88"
+                />
+              </motion.div>
+            )}
           </div>
         </SectionTransition>
 
@@ -264,42 +255,43 @@ export function HomeSections() {
         <SectionTransition className="pb-24 md:pb-32">
           <div className="grid gap-8 md:grid-cols-2">
             <div className={panel}>
-              <p className={lbl}>Διοίκηση 2024–2026</p>
-              <h2 className={`${ttl} mt-3 text-[1.45rem] md:text-[1.65rem]`}>
-                Διοικητικό Συμβούλιο
-              </h2>
+              <p className={lbl}>{board.label}</p>
+              <h2 className={`${ttl} mt-3 text-[1.45rem] md:text-[1.65rem]`}>{board.title}</h2>
               <ul className={`${bdy} mt-6 space-y-2.5 border-l border-[rgba(154,123,82,0.2)] pl-5`}>
-                <li><span className="text-[rgba(232,228,214,0.38)] text-[0.7rem] uppercase tracking-widest">Πρόεδρος</span><br />Μαρία Δεσύπρη</li>
-                <li><span className="text-[rgba(232,228,214,0.38)] text-[0.7rem] uppercase tracking-widest">Αντιπρόεδρος</span><br />Γ. Παγώνης - Εβρενέζογλου</li>
-                <li><span className="text-[rgba(232,228,214,0.38)] text-[0.7rem] uppercase tracking-widest">Γεν. Γραμματέας</span><br />Περδίκης Χαράλαμπος</li>
-                <li><span className="text-[rgba(232,228,214,0.38)] text-[0.7rem] uppercase tracking-widest">Ταμίας</span><br />Παπαμελετίου Αλεξάνδρα</li>
+                {board.members.map((member, i) => (
+                  <BoardRow key={`${member.role}-${i}`} member={member} />
+                ))}
               </ul>
             </div>
 
             <div className={panel}>
-              <p className={lbl}>Έγγραφα</p>
-              <h2 className={`${ttl} mt-3 text-[1.45rem] md:text-[1.65rem]`}>Πρακτικά Συλλόγου</h2>
-              <p className={`${bdy} mt-5`}>
-                Ο Εξωραϊστικός Σύλλογος δημοσιεύει τα πρακτικά των
-                συνεδριάσεών του για πλήρη διαφάνεια απέναντι στα μέλη.
-              </p>
+              <p className={lbl}>{documents.label}</p>
+              <h2 className={`${ttl} mt-3 text-[1.45rem] md:text-[1.65rem]`}>{documents.title}</h2>
+              <p className={`${bdy} mt-5`}>{documents.text}</p>
               <div className="mt-6 space-y-3.5">
-                <a
-                  href={`${LEGACY_ORIGIN}/23DS_N1.pdf`}
-                  className="group flex items-center gap-2 font-body text-[0.86rem] text-[rgba(232,228,214,0.52)] transition hover:text-[var(--ivory)]"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                >
-                  <span className="text-[rgba(154,123,82,0.55)]">↗</span>
-                  Τελευταίο πρακτικό (23ου ΔΣ)
-                </a>
-                <Link
-                  href="/Documents"
-                  className="group flex items-center gap-2 font-body text-[0.86rem] text-[rgba(232,228,214,0.52)] transition hover:text-[var(--ivory)]"
-                >
-                  <span className="text-[rgba(154,123,82,0.55)]">→</span>
-                  Αρχείο πρακτικών
-                </Link>
+                {documents.links.map((link, i) =>
+                  isExternal(link) ? (
+                    <a
+                      key={`${link.href}-${i}`}
+                      href={link.href}
+                      className="group flex items-center gap-2 font-body text-[0.86rem] text-[rgba(232,228,214,0.52)] transition hover:text-[var(--ivory)]"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                    >
+                      <span className="text-[rgba(154,123,82,0.55)]">↗</span>
+                      {link.title}
+                    </a>
+                  ) : (
+                    <Link
+                      key={`${link.href}-${i}`}
+                      href={link.href}
+                      className="group flex items-center gap-2 font-body text-[0.86rem] text-[rgba(232,228,214,0.52)] transition hover:text-[var(--ivory)]"
+                    >
+                      <span className="text-[rgba(154,123,82,0.55)]">→</span>
+                      {link.title}
+                    </Link>
+                  ),
+                )}
               </div>
             </div>
           </div>
@@ -309,19 +301,19 @@ export function HomeSections() {
         <SectionTransition className="pb-8">
           <div className="grid gap-8 md:grid-cols-[1.1fr_0.9fr]">
             <div className={panel}>
-              <p className={lbl}>Νέα &amp; Ανακοινώσεις</p>
-              <h2 className={`${ttl} mt-3 text-[1.45rem] md:text-[1.65rem]`}>Ειδήσεις</h2>
+              <p className={lbl}>{news.label}</p>
+              <h2 className={`${ttl} mt-3 text-[1.45rem] md:text-[1.65rem]`}>{news.title}</h2>
               <div className="mt-7 divide-y divide-[rgba(232,228,214,0.042)]">
-                {NEWS.map((n) =>
-                  n.ext ? (
+                {news.items.map((item, i) =>
+                  isExternal(item) ? (
                     <a
-                      key={n.href}
-                      href={n.href}
+                      key={`${item.href}-${i}`}
+                      href={item.href}
                       className="group flex items-center justify-between py-4 font-body text-[0.84rem] text-[rgba(232,228,214,0.55)] transition hover:text-[var(--ivory)]"
                       target="_blank"
                       rel="noopener noreferrer"
                     >
-                      {n.label}
+                      {item.title}
                       <motion.span
                         className="ml-4 text-[rgba(154,123,82,0.45)]"
                         whileHover={{ x: 2 }}
@@ -332,11 +324,11 @@ export function HomeSections() {
                     </a>
                   ) : (
                     <Link
-                      key={n.href}
-                      href={n.href}
+                      key={`${item.href}-${i}`}
+                      href={item.href}
                       className="group flex items-center justify-between py-4 font-body text-[0.84rem] text-[rgba(232,228,214,0.55)] transition hover:text-[var(--ivory)]"
                     >
-                      {n.label}
+                      {item.title}
                       <motion.span
                         className="ml-4 text-[rgba(154,123,82,0.45)]"
                         whileHover={{ x: 2 }}
@@ -351,17 +343,14 @@ export function HomeSections() {
             </div>
 
             <div className={panel}>
-              <p className={lbl}>Επικοινωνία</p>
-              <h2 className={`${ttl} mt-3 text-[1.45rem] md:text-[1.65rem]`}>Συμμετοχή</h2>
-              <p className={`${bdy} mt-5`}>
-                Η φωνή κάθε κατοίκου μετράει. Στείλτε μας τα κείμενα, τις
-                απόψεις και τις προτάσεις σας.
-              </p>
+              <p className={lbl}>{contact.label}</p>
+              <h2 className={`${ttl} mt-3 text-[1.45rem] md:text-[1.65rem]`}>{contact.title}</h2>
+              <p className={`${bdy} mt-5`}>{contact.text}</p>
               <a
-                href="mailto:agiosnektarios.vilia@gmail.com"
+                href={`mailto:${contact.email}`}
                 className="mt-5 block font-body text-[0.84rem] text-[rgba(154,123,82,0.78)] underline decoration-[rgba(154,123,82,0.25)] underline-offset-4 transition hover:text-[rgba(232,228,214,0.9)]"
               >
-                agiosnektarios.vilia@gmail.com
+                {contact.email}
               </a>
               <div className="mt-7 flex gap-3">
                 <Link

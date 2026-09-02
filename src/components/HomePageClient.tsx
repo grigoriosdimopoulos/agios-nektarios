@@ -1,13 +1,27 @@
+import type { HomeContent, SiteSettings } from "@/lib/content/schema";
 import { AmbientBackdrop } from "./AmbientBackdrop";
 import { HomeSections } from "./HomeSections";
 import { ImmersiveLanding } from "./ImmersiveLanding";
+import { LivingScene } from "./LivingScene";
 import { ScrollProgressBar } from "./ScrollProgressBar";
 import { SiteFooter } from "./SiteFooter";
 
-export function HomePageClient() {
+export function HomePageClient({
+  content,
+  settings,
+}: {
+  content: HomeContent;
+  settings: SiteSettings;
+}) {
+  const sceneEnabled = settings.scene.enabled;
+
   return (
     <>
-      <AmbientBackdrop />
+      {sceneEnabled ? (
+        <LivingScene settings={settings.scene} />
+      ) : (
+        <AmbientBackdrop />
+      )}
       <ScrollProgressBar />
       <a
         href="#main-content"
@@ -16,10 +30,10 @@ export function HomePageClient() {
         Παράβλεψη στο περιεχόμενο
       </a>
       <main id="main-content">
-        <ImmersiveLanding />
-        <HomeSections />
+        <ImmersiveLanding hero={content.hero} sceneEnabled={sceneEnabled} />
+        <HomeSections content={content} />
       </main>
-      <SiteFooter />
+      <SiteFooter settings={settings} />
     </>
   );
 }

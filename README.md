@@ -1,36 +1,101 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Άγιος Νεκτάριος — Εξωραϊστικός Σύλλογος Βιλίων
 
-## Getting Started
+Next.js 16 (App Router, Turbopack) site for the settlement of Άγιος Νεκτάριος
+on Mount Kithairon. It has two parts beyond the public pages:
 
-First, run the development server:
+- **Διαχείριση** (`/admin`) — an administrator logs in and edits every text on
+  the site, uploads photographs and documents, and tunes the background.
+- **Ζωντανό σκηνικό** — a canvas backdrop that follows the real sun, moon,
+  weather, season and feast day at the village.
+
+## Ανάπτυξη
 
 ```bash
+npm install
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## Διαχείριση περιεχομένου
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+Ο διαχειριστής συνδέεται στο `/admin/login` και μπορεί να αλλάξει:
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+| Σελίδα | Τι ρυθμίζει |
+| --- | --- |
+| `/admin/home` | Κάθε κείμενο της αρχικής: τίτλοι, εισαγωγή, αριθμοί, ενότητες, ΔΣ, νέα, επικοινωνία |
+| `/admin/pages` | Τίτλο και κείμενο κάθε εσωτερικής σελίδας (WYSIWYG ή απευθείας HTML) |
+| `/admin/media` | Ανέβασμα φωτογραφιών και PDF, με έτοιμο σύνδεσμο για επικόλληση |
+| `/admin/scene` | Ρυθμίσεις ιστότοπου και ζωντανού φόντου |
 
-## Learn More
+Κάθε αποθήκευση εμφανίζεται αμέσως στον ιστότοπο — δεν χρειάζεται νέο deploy.
+Το κουμπί «Επαναφορά» σε κάθε σελίδα γυρίζει στο αρχικό κείμενο.
 
-To learn more about Next.js, take a look at the following resources:
+### Μεταβλητές περιβάλλοντος (Netlify → Site configuration → Environment variables)
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+| Μεταβλητή | Υποχρεωτική | Περιγραφή |
+| --- | --- | --- |
+| `ADMIN_PASSWORD_HASH` | ναι¹ | Κωδικός διαχειριστή σε μορφή `scrypt:<salt>:<hash>` |
+| `ADMIN_USERNAME` | όχι | Όνομα χρήστη, προεπιλογή `admin` |
+| `ADMIN_SESSION_SECRET` | συνιστάται | Τυχαία συμβολοσειρά ≥ 16 χαρακτήρων για την υπογραφή του cookie |
+| `ADMIN_PASSWORD` | εναλλακτικά¹ | Κωδικός σε απλό κείμενο — λιγότερο ασφαλές |
+| `CONTENT_DATA_DIR` | όχι | Φάκελος αποθήκευσης εκτός Netlify (προεπιλογή `.data`) |
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+¹ Χρειάζεται ένα από τα δύο. Χωρίς αυτά η σύνδεση απορρίπτεται και η σελίδα
+σύνδεσης το εξηγεί.
 
-## Deploy on Vercel
+Δημιουργία hash:
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+```bash
+node scripts/hash-password.mjs "ο-κωδικός-σας"
+```
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+### Πού αποθηκεύεται το περιεχόμενο
+
+- **Στο Netlify:** [Netlify Blobs](https://docs.netlify.com/build/data-and-storage/netlify-blobs/)
+  (store `agios-nektarios-content`), χωρίς ρύθμιση και χωρίς βάση δεδομένων.
+- **Τοπικά ή σε άλλον host:** απλά αρχεία στον φάκελο `.data/`.
+
+Τα αρχικά κείμενα των εσωτερικών σελίδων παραμένουν στο `content/legacy/` και
+χρησιμοποιούνται όσο δεν έχει γίνει επεξεργασία.
+
+## Το ζωντανό σκηνικό
+
+`src/scene/` — καμβάς 2D πίσω από όλο τον ιστότοπο:
+
+- **Ήλιος και σελήνη** στην πραγματική τους θέση για τις συντεταγμένες του
+  οικισμού (38.1625° Β, 23.2913° Α), με φάση σελήνης, αυγή, χρυσή ώρα και
+  γαλάζια ώρα (`astronomy.ts`, `palette.ts`).
+- **Καιρός** από το Open-Meteo κάθε δέκα λεπτά, χωρίς κλειδί και χωρίς cookies
+  (`/api/weather`): συννεφιά, βροχή, χιόνι, ομίχλη, καταιγίδα με αστραπές.
+- **Άνεμος** με ριπές, που κινεί ταυτόχρονα κλαδιά, φύλλα, χιόνι, καπνό,
+  σημαίες και χόρτα (`wind.ts`).
+- **Δέντρα** όπου κάθε κλαδί είναι ταλαντωτής με απόσβεση· ρίχνουν φύλλα,
+  βελόνες, άνθη και καρπούς που πέφτουν με βαρύτητα, οπισθέλκουσα και
+  αεροδυναμικό «φτερούγισμα» (`layers/forest.ts`, `layers/particles.ts`).
+- **Οικισμός** με σπίτια που ανάβουν φώτα το βράδυ, καμινάδες που καπνίζουν
+  τον χειμώνα, τον ναό φωτισμένο και αυτοκίνητα με φανάρια (`layers/village.ts`).
+- **Ζώα**: πουλιά σε σμήνος (boids) την αυγή, νυχτερίδες το σούρουπο,
+  κουκουβάγιες τη νύχτα, πεταλούδες και πυγολαμπίδες την άνοιξη και το
+  καλοκαίρι (`layers/wildlife.ts`).
+- **Εποχές**: άνθη την άνοιξη, ξερά χόρτα το καλοκαίρι, φύλλωμα που κιτρινίζει
+  και πέφτει το φθινόπωρο, γυμνά δέντρα και χιόνι τον χειμώνα.
+- **Γιορτές**: ελληνικές σημαίες που κυματίζουν με τον άνεμο στις 25 Μαρτίου
+  και στις 28 Οκτωβρίου, χριστουγεννιάτικα λαμπάκια, πυροτεχνήματα την
+  Πρωτοχρονιά και το Πάσχα (ορθόδοξο computus), λαμπάδες την Ανάσταση και
+  στη γιορτή του Αγίου Νεκταρίου (`layers/holiday.ts`).
+
+Το σκηνικό σέβεται το `prefers-reduced-motion` (μία στατική εικόνα), παγώνει
+όταν η καρτέλα δεν είναι ορατή, και προσαρμόζει την ποιότητα στη συσκευή.
+
+### Φωτογραφικά επίπεδα
+
+Στο `/admin/scene` μπορείτε να δώσετε συνδέσμους από τα «Αρχεία» για τέσσερα
+επίπεδα (ουρανός, μακρινό βουνό, μεσαίο, κοντινό). Οι πραγματικές φωτογραφίες
+του τόπου φωτίζονται από την ίδια μηχανή φωτισμού — γίνονται χρυσές στο
+ηλιοβασίλεμα και γαλάζιες το σούρουπο.
+
+## Έλεγχος
+
+```bash
+npm run lint
+npm run build
+```
