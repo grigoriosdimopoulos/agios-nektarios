@@ -16,37 +16,65 @@ export const PHOTO_PLATES = {
   lights: { src: "/scene/lights.webp", aspect: 3000 / 766 },
 } as const;
 
-export const RIDGE_OVERSCAN = 1.06;
-export const RIDGE_BASE_OFFSET = 0.17;
-export const FOREST_OVERSCAN = 1.9;
-export const FOREST_BASE_OFFSET = 0.42;
-
 export type PhotoLight = { x: number; y: number };
 
-/** Where the ridge plate lands on screen — shared by the backdrop and the
- *  decorations that have to sit on the houses in it. */
-export function ridgeBox(width: number, height: number, groundY: number) {
-  const drawWidth = width * RIDGE_OVERSCAN;
-  const drawHeight = drawWidth / PHOTO_PLATES.ridge.aspect;
-  const bottom = groundY + height * RIDGE_BASE_OFFSET;
+export type PlateBox = {
+  left: number;
+  top: number;
+  drawWidth: number;
+  drawHeight: number;
+};
+
+/**
+ * Places both plates so that they always cover the ground, at any window
+ * shape. Sizing them from the window width alone leaves a strip of bare sky
+ * between the ridge and the wood on tall or narrow screens.
+ */
+export function plateLayout(
+  width: number,
+  height: number,
+  groundY: number,
+): { ridge: PlateBox; forest: PlateBox } {
+  const ridgeBottom = groundY + height * 0.17;
+
+  // The ridge keeps its natural size: blowing it up on a tall screen would
+  // swallow the sky. The wood below is what grows to close any gap.
+  const ridgeWidth = width * 1.06;
+  const ridgeHeight = ridgeWidth / PHOTO_PLATES.ridge.aspect;
+
+  // The wood starts a little above where the ridge plate ends and runs past
+  // the bottom edge, so the two always overlap.
+  const overlap = height * 0.05;
+  const forestTop = ridgeBottom - overlap;
+  let forestHeight = height * 1.04 - forestTop;
+  let forestWidth = forestHeight * PHOTO_PLATES.forest.aspect;
+  if (forestWidth < width * 1.3) {
+    forestWidth = width * 1.3;
+    forestHeight = forestWidth / PHOTO_PLATES.forest.aspect;
+  }
+
   return {
-    left: (width - drawWidth) / 2,
-    top: bottom - drawHeight,
-    drawWidth,
-    drawHeight,
+    ridge: {
+      left: (width - ridgeWidth) / 2,
+      top: ridgeBottom - ridgeHeight,
+      drawWidth: ridgeWidth,
+      drawHeight: ridgeHeight,
+    },
+    forest: {
+      left: (width - forestWidth) / 2,
+      top: forestTop,
+      drawWidth: forestWidth,
+      drawHeight: forestHeight,
+    },
   };
 }
 
+export function ridgeBox(width: number, height: number, groundY: number) {
+  return plateLayout(width, height, groundY).ridge;
+}
+
 export function forestBox(width: number, height: number, groundY: number) {
-  const drawWidth = width * FOREST_OVERSCAN;
-  const drawHeight = drawWidth / PHOTO_PLATES.forest.aspect;
-  const bottom = groundY + height * FOREST_BASE_OFFSET;
-  return {
-    left: (width - drawWidth) / 2,
-    top: bottom - drawHeight,
-    drawWidth,
-    drawHeight,
-  };
+  return plateLayout(width, height, groundY).forest;
 }
 
 /** The photographed houses, in screen coordinates. */

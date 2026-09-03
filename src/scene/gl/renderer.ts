@@ -5,6 +5,7 @@ import {
   ridgeBox,
 } from "../photoScene";
 import type { Frame } from "../types";
+import type { Season } from "../calendar";
 import { POST_FRAGMENT, SCENE_FRAGMENT, VERTEX } from "./shaders";
 
 type Program = { program: WebGLProgram; uniforms: Record<string, WebGLUniformLocation | null> };
@@ -45,10 +46,12 @@ const SCENE_UNIFORMS = [
   "uResolution", "uTime", "uRidge", "uForest", "uLights",
   "uRidgeRect", "uForestRect",
   "uZenith", "uHorizon", "uSunColor", "uMoonColor", "uHazeColor", "uAmbient",
-  "uSunPos", "uMoonPos", "uSunIntensity", "uMoonIntensity", "uMoonPhase",
+  "uSunPos", "uMoonPos", "uSunIntensity", "uMoonIntensity",
+  "uMoonUp", "uMoonIllum", "uMoonWaxing",
   "uAmbientIntensity", "uGolden", "uHazeDensity", "uStarVisibility", "uNight",
   "uWind", "uCloudCover", "uRain", "uSnow", "uSnowCover", "uFlash", "uHorizonY",
   "uLightSchedule", "uLightTintA", "uLightTintB", "uLightTintC",
+  "uSeasonTint", "uSeasonDry", "uBirds",
 ];
 
 const POST_UNIFORMS = [
@@ -72,6 +75,14 @@ function lightSchedule(frame: Frame): [number, number, number] {
 }
 
 type Tint = [number, number, number];
+
+/** What the year does to the colour of the hillside. */
+const SEASON_GRADE: Record<Season, { tint: Tint; dry: number }> = {
+  spring: { tint: [0.97, 1.09, 0.97], dry: 0 },
+  summer: { tint: [1.11, 1.0, 0.84], dry: 0.75 },
+  autumn: { tint: [1.14, 0.94, 0.78], dry: 1 },
+  winter: { tint: [0.9, 0.96, 1.12], dry: 0.3 },
+};
 const WARM: Tint = [1, 0.72, 0.42];
 
 /** Holidays are expressed only as the colour of the village's lamps. */
@@ -251,7 +262,11 @@ export function createGLRenderer(canvas: HTMLCanvasElement): GLRenderer | null {
       gl.uniform2f(u.uMoonPos, frame.moonScreen.x / frame.width, frame.moonScreen.y / frame.height);
       gl.uniform1f(u.uSunIntensity, lighting.sunIntensity);
       gl.uniform1f(u.uMoonIntensity, lighting.moonIntensity);
-      gl.uniform1f(u.uMoonPhase, frame.moon.phase);
+      // Up, lit fraction and direction are what the shader needs to draw a
+      // moon that is present even as a crescent.
+      gl.uniform1f(u.uMoonUp, clamp(((frame.moon.altitude * 180) / Math.PI + 2) / 8));
+      gl.uniform1f(u.uMoonIllum, clamp(frame.moon.illumination));
+      gl.uniform1f(u.uMoonWaxing, frame.moon.phase < 0.5 ? 1 : 0);
       gl.uniform1f(u.uAmbientIntensity, lighting.ambientIntensity);
       gl.uniform1f(u.uGolden, lighting.goldenFactor);
       gl.uniform1f(u.uHazeDensity, lighting.hazeDensity);
@@ -271,6 +286,17 @@ export function createGLRenderer(canvas: HTMLCanvasElement): GLRenderer | null {
       gl.uniform3fv(u.uLightTintA, tintA);
       gl.uniform3fv(u.uLightTintB, tintB);
       gl.uniform3fv(u.uLightTintC, tintC);
+
+      const season = SEASON_GRADE[frame.season];
+      gl.uniform3fv(u.uSeasonTint, season.tint);
+      gl.uniform1f(u.uSeasonDry, season.dry);
+      // Birds are a daytime thing, busiest around first light.
+      const hour = frame.now.getHours() + frame.now.getMinutes() / 60;
+      const dawn = smoothstep(4.8, 6.8, hour) * (1 - smoothstep(9, 11.5, hour));
+      gl.uniform1f(
+        u.uBirds,
+        clamp(Math.max(dawn, lighting.dayFactor * 0.55) * (1 - frame.weather.cloudCover * 0.4)),
+      );
 
       gl.drawArrays(gl.TRIANGLES, 0, 3);
 

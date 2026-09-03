@@ -128,10 +128,13 @@ export function createFrameSource(read: {
 
       // Sun and moon are placed as if the camera looks due south: the azimuth
       // is measured from south, so the sun rises left and sets right.
+      // A panoramic mapping. A 140° window put the moon off the side of the
+      // frame for most of the night; across 260° the sun and moon stay in
+      // view for as long as they are up, which is what a visitor expects.
       const project = (altitude: number, azimuth: number) => {
-        const span = (140 * Math.PI) / 180;
+        const span = (260 * Math.PI) / 180;
         return {
-          x: width * (0.5 + clamp(azimuth / span, -0.75, 0.75)),
+          x: width * (0.5 + clamp(azimuth / span, -0.46, 0.46)),
           y: horizonY - (altitude / (Math.PI / 2)) * horizonY * 1.1,
         };
       };

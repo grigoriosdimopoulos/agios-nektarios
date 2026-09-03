@@ -75,7 +75,9 @@ uniform vec2 uSunPos;       // screen UV
 uniform vec2 uMoonPos;
 uniform float uSunIntensity;
 uniform float uMoonIntensity;
-uniform float uMoonPhase;
+uniform float uMoonUp;       // 0…1 how far the moon is above the horizon
+uniform float uMoonIllum;    // lit fraction of the disc
+uniform float uMoonWaxing;   // 1 while waxing, 0 while waning
 uniform float uAmbientIntensity;
 uniform float uGolden;
 uniform float uHazeDensity;
@@ -93,6 +95,9 @@ uniform vec3 uLightSchedule; // how lit each of the three house groups is
 uniform vec3 uLightTintA;    // colour of each group's windows
 uniform vec3 uLightTintB;
 uniform vec3 uLightTintC;
+uniform vec3 uSeasonTint;    // the colour the year lends the landscape
+uniform float uSeasonDry;    // how far the green has gone to straw
+uniform float uBirds;
 
 ${COMMON}
 
@@ -109,10 +114,11 @@ float stars(vec2 uv) {
   float present = step(0.9955, h);
   vec2 f = fract(p) - 0.5;
   float d = length(f);
-  float twinkle = 0.55 + 0.45 * sin(uTime * (0.7 + h * 2.6) + h * 90.0);
+  // Atmospheric scintillation is small and quick, not a blinking light.
+  float twinkle = 0.88 + 0.12 * sin(uTime * (2.7 + h * 5.0) + h * 90.0);
   // Extinction: fewer and dimmer stars close to the horizon.
   float extinction = smoothstep(uHorizonY, uHorizonY * 0.25, uv.y);
-  return present * smoothstep(0.34, 0.0, d) * twinkle * extinction;
+  return present * smoothstep(0.2, 0.0, d) * twinkle * extinction;
 }
 
 vec3 clouds(vec2 uv, vec3 base) {
@@ -141,16 +147,23 @@ vec3 celestial(vec2 uv, vec3 base) {
 
   vec2 dm = (uv - uMoonPos) * vec2(aspect, 1.0);
   float distMoon = length(dm);
-  float moonDisc = smoothstep(0.013, 0.010, distMoon);
-  // Phase: the terminator is an offset disc cutting into the lit face.
-  float shift = cos(uMoonPhase * 6.2831853) * 0.013;
-  float lit = smoothstep(0.013, 0.010, length(dm - vec2(shift, 0.0)));
-  float face = uMoonPhase < 0.5 ? moonDisc * (1.0 - lit * step(shift, 0.0))
-                                : moonDisc * (1.0 - lit * step(0.0, shift));
-  face = mix(moonDisc, face, 0.85);
-  float moonGlow = exp(-distMoon * 16.0) * 0.5;
-  vec3 moon = (uMoonColor / 255.0) * (face * 0.9 + moonGlow * 0.6)
-            * uMoonIntensity * (1.0 - uSunIntensity * 0.8);
+  float radius = 0.017;
+  float moonDisc = smoothstep(radius, radius * 0.86, distMoon);
+
+  // The terminator is an ellipse across the disc whose width is the lit
+  // fraction; everything on the sunward side of it is lit.
+  float ny = clamp(dm.y / radius, -1.0, 1.0);
+  float halfWidth = sqrt(max(0.0, 1.0 - ny * ny));
+  float xt = -(2.0 * uMoonIllum - 1.0) * radius * halfWidth;
+  float side = uMoonWaxing > 0.5 ? (dm.x - xt) : (xt - dm.x);
+  float litMask = smoothstep(-0.0007, 0.0007, side);
+  float face = moonDisc * mix(0.07, 1.0, litMask);
+
+  // Visible whenever it is up, even as a thin crescent.
+  float presence = uMoonUp * (1.0 - uSunIntensity * 0.75);
+  float moonGlow = exp(-distMoon * 26.0) * 0.45 * (0.3 + 0.7 * uMoonIllum);
+  vec3 moon = (uMoonColor / 255.0) * (face * (0.5 + 0.7 * uMoonIllum) + moonGlow)
+            * presence;
 
   return base + sun + moon;
 }
@@ -166,20 +179,25 @@ vec4 plate(sampler2D tex, vec4 rect, vec2 uv, float windAmp, float sway) {
   float veg = smoothstep(0.015, 0.11, base.g - 0.5 * (base.r + base.b) + 0.055);
   veg *= smoothstep(0.85, 0.4, base.g);
 
-  float gust = 0.55 + 0.45 * sin(uTime * 0.7 + p.x * 3.0);
-  vec2 flow = vec2(
-    flowNoise(p * vec2(38.0, 96.0) + vec2(uTime * 0.55 * sway, uTime * 0.12)),
-    flowNoise(p * vec2(44.0, 112.0) + 21.0 + vec2(uTime * 0.47 * sway, uTime * 0.1))
-  );
-  vec2 disp = (flow - 0.5) * windAmp * veg * gust;
-  // Foliage swings along the wind far more than across it.
-  disp.y *= 0.35;
+  // Foliage swings back and forth; a drifting noise field only shimmers.
+  // Two frequencies and a per-place phase keep neighbouring crowns out of step.
+  float phase = valueNoise(p * vec2(11.0, 26.0)) * 6.2831853;
+  float gust = 0.5 + 0.5 * sin(uTime * 0.27 + p.x * 2.4 + phase * 0.2);
+  float swing = sin(uTime * 1.7 + phase) * 0.62 + sin(uTime * 3.3 + phase * 1.7) * 0.38;
+  float amount = windAmp * veg * gust;
+  vec2 disp = vec2(swing * sway * amount, abs(swing) * amount * 0.14);
 
   return texture(tex, p + disp);
 }
 
 /** Grades the photograph with the light of the moment. */
 vec3 gradePhoto(vec3 color, float distance) {
+  // The year first: it is a property of the hillside, not of the light on it.
+  color *= uSeasonTint;
+  float green = smoothstep(0.02, 0.12, color.g - 0.5 * (color.r + color.b) + 0.05);
+  vec3 straw = vec3(color.g * 1.18, color.g * 1.02, color.g * 0.6);
+  color = mix(color, straw, green * uSeasonDry * 0.7);
+
   vec3 veil = mix(uAmbient / 255.0 * 0.30, uMoonColor / 255.0, 0.30 * uMoonIntensity);
   float darkness = clamp(1.0 - uAmbientIntensity, 0.0, 1.0);
   color = mix(color, veil, min(0.86, darkness * 0.92));
@@ -204,28 +222,73 @@ vec3 houseLights(vec2 uv, vec3 base) {
   return base + add * uNight * 0.5;
 }
 
-float rainMask(vec2 uv, float scale, float speed, float shear) {
-  vec2 p = uv * vec2(scale * uResolution.x / uResolution.y, scale);
+/**
+ * Rain crosses the frame in a fraction of a second. Cells are tall and thin so
+ * each drop is a dash, and the whole field is sheared by the wind.
+ */
+float rainMask(vec2 uv, float scale, float speed, float shear, float density) {
+  // Many cells across and few down, so a drop is a hair-thin dash rather than
+  // a block. The width here is roughly one pixel on screen.
+  vec2 p = vec2(uv.x * scale * 3.2 * uResolution.x / uResolution.y, uv.y * scale);
   p.x += p.y * shear;
   p.y -= uTime * speed;
   vec2 cell = floor(p);
   float h = hash21(cell);
-  if (h < 0.972) return 0.0;
+  if (h < density) return 0.0;
   vec2 f = fract(p);
-  float streak = smoothstep(0.5, 0.0, abs(f.x - 0.5) * 12.0);
-  streak *= smoothstep(0.0, 0.25, f.y) * smoothstep(1.0, 0.55, f.y);
-  return streak;
+  float streak = smoothstep(0.055, 0.0, abs(f.x - 0.5));
+  float len = 0.22 + 0.34 * hash21(cell + 7.3);
+  streak *= smoothstep(0.0, 0.035, f.y) * smoothstep(len, len - 0.18, f.y);
+  return streak * (0.5 + 0.5 * hash21(cell + 19.7));
 }
 
+/** Snow drifts down in a handful of seconds, wandering as it goes. */
 float snowMask(vec2 uv, float scale, float speed, float drift) {
   vec2 p = uv * vec2(scale * uResolution.x / uResolution.y, scale);
   p.y -= uTime * speed;
-  p.x += sin(uTime * 0.6 + p.y * 2.0) * drift + uTime * drift * 2.0;
+  p.x += sin(uTime * 0.5 + p.y * 1.6) * drift * 6.0 + uTime * drift * 3.0;
   vec2 cell = floor(p);
   float h = hash21(cell);
-  if (h < 0.986) return 0.0;
+  if (h < 0.962) return 0.0;
   vec2 f = fract(p) - 0.5;
-  return smoothstep(0.34, 0.0, length(f));
+  // A flake is a couple of pixels, not a snowball.
+  return smoothstep(0.07, 0.005, length(f)) * (0.55 + 0.45 * hash21(cell + 4.2));
+}
+
+/** One small dark mark with a shallow V of wings. */
+float birdMark(vec2 uv, vec2 pos, float size, float flap) {
+  vec2 d = (uv - pos) * vec2(uResolution.x / uResolution.y, 1.0) / size;
+  float bend = flap * 0.5;
+  float y = d.y + bend * (0.4 - abs(d.x) * 0.4);
+  float along = max(abs(d.x) - 1.0, 0.0);
+  return smoothstep(0.4, 0.0, sqrt(along * along + y * y * 3.0));
+}
+
+vec3 birds(vec2 uv, vec3 base) {
+  if (uBirds < 0.01) return base;
+  // A flock crosses every three quarters of a minute or so.
+  float cycle = 46.0;
+  float t = fract(uTime / cycle);
+  float flight = floor(uTime / cycle);
+  float dir = mod(flight, 2.0) < 1.0 ? 1.0 : -1.0;
+  float visible = smoothstep(0.0, 0.02, t) * (1.0 - smoothstep(0.66, 0.74, t));
+  if (visible < 0.01) return base;
+
+  float lead = mix(-0.2, 1.2, t / 0.74);
+  float height = 0.16 + hash21(vec2(flight, 3.0)) * 0.22;
+  float mark = 0.0;
+  for (int i = 0; i < 7; i++) {
+    float fi = float(i);
+    float jitterX = hash21(vec2(flight, fi));
+    float jitterY = hash21(vec2(fi, flight + 5.0));
+    float lag = fi * 0.03 + jitterX * 0.05;
+    float x = dir > 0.0 ? lead - lag : 1.0 - lead + lag;
+    float y = height + (jitterY - 0.5) * 0.075 + sin(uTime * 0.8 + fi * 1.7) * 0.006;
+    // Each bird beats at its own rate, as a real flock does.
+    float flap = sin(uTime * (6.2 + jitterX * 3.0) + fi * 1.3);
+    mark += birdMark(uv, vec2(x, y), 0.0045 + jitterY * 0.0022, flap);
+  }
+  return mix(base, base * 0.2, clamp(mark, 0.0, 1.0) * visible * uBirds);
 }
 
 void main() {
@@ -234,11 +297,12 @@ void main() {
   color = clouds(uv, color);
   color += vec3(0.85, 0.9, 1.0) * stars(uv) * uStarVisibility * 0.9;
   color = celestial(uv, color);
+  color = birds(uv, color);
 
-  float windAmp = 0.0022 + 0.006 * abs(uWind);
+  float windAmp = 0.004 + 0.014 * abs(uWind);
   float sway = sign(uWind + 0.0001);
 
-  vec4 ridge = plate(uRidge, uRidgeRect, uv, windAmp * 0.55, sway);
+  vec4 ridge = plate(uRidge, uRidgeRect, uv, windAmp * 0.3, sway);
   if (ridge.a > 0.001) {
     color = mix(color, gradePhoto(ridge.rgb, 1.0), ridge.a);
   }
@@ -257,15 +321,16 @@ void main() {
   }
 
   if (uRain > 0.01) {
-    float drops = rainMask(uv, 26.0, 1.9, 0.35 * uWind)
-                + rainMask(uv, 44.0, 2.9, 0.3 * uWind) * 0.7;
-    color += vec3(0.62, 0.7, 0.82) * drops * uRain * (0.18 + 0.5 * uAmbientIntensity);
+    float drops = rainMask(uv, 15.0, 33.0, 0.32 * uWind, 0.86)
+                + rainMask(uv, 24.0, 50.0, 0.28 * uWind, 0.90) * 0.7;
+    color += vec3(0.68, 0.75, 0.86) * drops * uRain * (0.16 + 0.34 * uAmbientIntensity);
   }
 
   if (uSnow > 0.01) {
-    float flakes = snowMask(uv, 30.0, 0.16, 0.05 * uWind)
-                 + snowMask(uv, 52.0, 0.26, 0.08 * uWind) * 0.8;
-    color += vec3(0.95, 0.96, 1.0) * flakes * uSnow * (0.3 + 0.6 * uAmbientIntensity);
+    float flakes = snowMask(uv, 22.0, 4.2, 0.05 * uWind)
+                 + snowMask(uv, 34.0, 6.6, 0.08 * uWind) * 0.8
+                 + snowMask(uv, 52.0, 9.5, 0.11 * uWind) * 0.6;
+    color += vec3(0.95, 0.96, 1.0) * flakes * uSnow * (0.4 + 0.6 * uAmbientIntensity);
   }
 
   color += vec3(0.72, 0.78, 1.0) * uFlash * 0.5;

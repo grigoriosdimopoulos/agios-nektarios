@@ -41,14 +41,25 @@ export function LivingScene({ settings }: { settings: SceneSettings }) {
     if (!canvas || !settings.enabled) return;
 
     const engineOptions = toEngineOptions(settings);
-    let engine: ReturnType<typeof createSceneEngine>;
+    let engine: ReturnType<typeof createSceneEngine> | null = null;
+
+    // The GPU path moves the photograph's own pixels; the canvas path is the
+    // fallback where WebGL2 is unavailable.
     try {
-      // The GPU path moves the photograph's own pixels; the canvas path is the
-      // fallback where WebGL2 is unavailable.
-      engine = createGLEngine(canvas, engineOptions) ?? createSceneEngine(canvas, engineOptions);
+      engine = createGLEngine(canvas, engineOptions);
     } catch {
+      engine = null;
+    }
+
+    let surface = canvas;
+    if (!engine) {
+      // A canvas that has been handed a WebGL context will never return a 2D
+      // one, so the fallback needs a fresh element.
+      const fresh = canvas.cloneNode(false) as HTMLCanvasElement;
+      canvas.replaceWith(fresh);
+      surface = fresh;
       try {
-        engine = createSceneEngine(canvas, engineOptions);
+        engine = createSceneEngine(surface, engineOptions);
       } catch {
         return;
       }
