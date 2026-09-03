@@ -98,6 +98,8 @@ uniform vec3 uLightTintC;
 uniform vec3 uSeasonTint;    // the colour the year lends the landscape
 uniform float uSeasonDry;    // how far the green has gone to straw
 uniform float uBirds;
+uniform float uRidgeSway;    // sway in each plate's own coordinates
+uniform float uForestSway;
 
 ${COMMON}
 
@@ -141,8 +143,12 @@ vec3 celestial(vec2 uv, vec3 base) {
 
   // Sun: a small blown-out core with a tight glow. The wide veiling glare is
   // the lens pass's job, not a giant blob painted into the sky.
-  float core = smoothstep(0.011, 0.006, dist);
-  float glow = exp(-dist * 46.0) * 0.5 + exp(-dist * 15.0) * 0.13;
+  // Cloud hides the disc long before it hides the light: under an overcast
+  // you get a bright patch of sky, never a hard-edged sun.
+  float clear = pow(1.0 - clamp(uCloudCover, 0.0, 1.0), 2.2);
+  float core = smoothstep(0.011, 0.006, dist) * clear;
+  float glow = exp(-dist * 46.0) * 0.5 * mix(0.25, 1.0, clear)
+             + exp(-dist * 15.0) * 0.13;
   vec3 sun = (uSunColor / 255.0) * (core * 1.7 + glow) * uSunIntensity;
 
   vec2 dm = (uv - uMoonPos) * vec2(aspect, 1.0);
@@ -159,8 +165,9 @@ vec3 celestial(vec2 uv, vec3 base) {
   float litMask = smoothstep(-0.0007, 0.0007, side);
   float face = moonDisc * mix(0.07, 1.0, litMask);
 
-  // Visible whenever it is up, even as a thin crescent.
-  float presence = uMoonUp * (1.0 - uSunIntensity * 0.75);
+  // Visible whenever it is up, even as a thin crescent — but a daytime moon
+  // is a pale ghost, and cloud swallows it entirely.
+  float presence = uMoonUp * (0.16 + 0.84 * uNight) * clear;
   float moonGlow = exp(-distMoon * 26.0) * 0.45 * (0.3 + 0.7 * uMoonIllum);
   vec3 moon = (uMoonColor / 255.0) * (face * (0.5 + 0.7 * uMoonIllum) + moonGlow)
             * presence;
@@ -170,6 +177,9 @@ vec3 celestial(vec2 uv, vec3 base) {
 
 /** Samples a plate, letting the wind move the vegetation inside it. */
 vec4 plate(sampler2D tex, vec4 rect, vec2 uv, float windAmp, float sway) {
+  // windAmp arrives already expressed in this plate's own coordinates, so the
+  // movement is the same handful of screen pixels however far the plate is
+  // zoomed. Scaling it in plate units made the foreground churn like water.
   vec2 p = (uv - rect.xy) / rect.zw;
   if (p.x < 0.0 || p.x > 1.0 || p.y < 0.0 || p.y > 1.0) return vec4(0.0);
 
@@ -181,11 +191,13 @@ vec4 plate(sampler2D tex, vec4 rect, vec2 uv, float windAmp, float sway) {
 
   // Foliage swings back and forth; a drifting noise field only shimmers.
   // Two frequencies and a per-place phase keep neighbouring crowns out of step.
-  float phase = valueNoise(p * vec2(11.0, 26.0)) * 6.2831853;
+  // A high spatial frequency keeps neighbouring crowns independent; a low one
+  // slides the whole hillside about as a single sheet.
+  float phase = valueNoise(p * vec2(90.0, 210.0)) * 6.2831853;
   float gust = 0.5 + 0.5 * sin(uTime * 0.27 + p.x * 2.4 + phase * 0.2);
   float swing = sin(uTime * 1.7 + phase) * 0.62 + sin(uTime * 3.3 + phase * 1.7) * 0.38;
   float amount = windAmp * veg * gust;
-  vec2 disp = vec2(swing * sway * amount, abs(swing) * amount * 0.14);
+  vec2 disp = vec2(swing * sway * amount, abs(swing) * amount * 0.2);
 
   return texture(tex, p + disp);
 }
@@ -299,16 +311,15 @@ void main() {
   color = celestial(uv, color);
   color = birds(uv, color);
 
-  float windAmp = 0.004 + 0.014 * abs(uWind);
   float sway = sign(uWind + 0.0001);
 
-  vec4 ridge = plate(uRidge, uRidgeRect, uv, windAmp * 0.3, sway);
+  vec4 ridge = plate(uRidge, uRidgeRect, uv, uRidgeSway, sway);
   if (ridge.a > 0.001) {
     color = mix(color, gradePhoto(ridge.rgb, 1.0), ridge.a);
   }
   color = houseLights(uv, color);
 
-  vec4 forest = plate(uForest, uForestRect, uv, windAmp, sway);
+  vec4 forest = plate(uForest, uForestRect, uv, uForestSway, sway);
   if (forest.a > 0.001) {
     color = mix(color, gradePhoto(forest.rgb, 0.35), forest.a);
   }

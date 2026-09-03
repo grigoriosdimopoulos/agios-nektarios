@@ -51,7 +51,7 @@ const SCENE_UNIFORMS = [
   "uAmbientIntensity", "uGolden", "uHazeDensity", "uStarVisibility", "uNight",
   "uWind", "uCloudCover", "uRain", "uSnow", "uSnowCover", "uFlash", "uHorizonY",
   "uLightSchedule", "uLightTintA", "uLightTintB", "uLightTintC",
-  "uSeasonTint", "uSeasonDry", "uBirds",
+  "uSeasonTint", "uSeasonDry", "uBirds", "uRidgeSway", "uForestSway",
 ];
 
 const POST_UNIFORMS = [
@@ -227,6 +227,9 @@ export function createGLRenderer(canvas: HTMLCanvasElement): GLRenderer | null {
         ] as const;
       };
 
+      // Sway is authored in screen pixels and converted per plate, so a plate
+      // zoomed in on a tall window does not swing further than a wide one.
+      const swayPixels = 2.2 + 6.0 * Math.abs(frame.wind.force);
       const schedule = lightSchedule(frame);
       const [tintA, tintB, tintC] = lightTints(frame);
       const u = scene.uniforms;
@@ -286,6 +289,9 @@ export function createGLRenderer(canvas: HTMLCanvasElement): GLRenderer | null {
       gl.uniform3fv(u.uLightTintA, tintA);
       gl.uniform3fv(u.uLightTintB, tintB);
       gl.uniform3fv(u.uLightTintC, tintC);
+
+      gl.uniform1f(u.uRidgeSway, (swayPixels * 0.3) / ridge.drawWidth);
+      gl.uniform1f(u.uForestSway, swayPixels / forest.drawWidth);
 
       const season = SEASON_GRADE[frame.season];
       gl.uniform3fv(u.uSeasonTint, season.tint);
