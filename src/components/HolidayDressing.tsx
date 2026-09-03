@@ -1,5 +1,7 @@
 "use client";
 
+import { useEffect, useRef, useState } from "react";
+
 import type { Holiday } from "@/scene/calendar";
 
 /** Bulb colours for each garland. */
@@ -19,62 +21,73 @@ const RIBBONS: Partial<Record<Holiday, string>> = {
   patron: "linear-gradient(90deg,rgba(154,123,82,0.9),rgba(240,206,140,0.85),rgba(154,123,82,0.9))",
 };
 
-const BULBS = 34;
-const SPAN = 1200;
-const SAG = 132;
+const SAG = 46;
+const HEIGHT = 88;
+const SPACING = 46;
 
-/** Point on the quadratic the garland hangs along. */
-function bulbPoint(t: number) {
-  const inv = 1 - t;
-  return {
-    x: SPAN * t,
-    y: inv * inv * 8 + 2 * t * inv * SAG + t * t * 8,
-  };
-}
-
+/**
+ * The garland is measured against the real width of the window rather than
+ * stretched from a fixed viewBox: stretching turned the bulbs into ovals and
+ * clipped the lowest of them where the wire sags.
+ */
 function Garland({ colors }: { colors: string[] }) {
+  const hostRef = useRef<HTMLDivElement>(null);
+  const [width, setWidth] = useState(0);
+
+  useEffect(() => {
+    const host = hostRef.current;
+    if (!host) return;
+    const measure = () => setWidth(host.clientWidth);
+    measure();
+    const observer = new ResizeObserver(measure);
+    observer.observe(host);
+    return () => observer.disconnect();
+  }, []);
+
+  const bulbs = Math.max(6, Math.round(width / SPACING));
+  const point = (t: number) => {
+    const inv = 1 - t;
+    return {
+      x: width * t,
+      // A quadratic hangs the wire; its lowest point is SAG below the ends.
+      y: inv * inv * 6 + 2 * t * inv * (6 + SAG * 2) + t * t * 6,
+    };
+  };
+
   return (
-    <svg
-      viewBox={`0 0 ${SPAN} 80`}
-      preserveAspectRatio="none"
-      className="h-[68px] w-full md:h-[84px]"
-      aria-hidden
-    >
-      <path
-        d={`M0,8 Q${SPAN / 2},${SAG} ${SPAN},8`}
-        fill="none"
-        stroke="rgba(16,18,22,0.55)"
-        strokeWidth="1.6"
-      />
-      {Array.from({ length: BULBS }, (_, i) => {
-        const t = i / (BULBS - 1);
-        const { x, y } = bulbPoint(t);
-        const color = colors[i % colors.length];
-        return (
-          <g key={i}>
-            <line
-              x1={x}
-              y1={y}
-              x2={x}
-              y2={y + 7}
-              stroke="rgba(16,18,22,0.5)"
-              strokeWidth="1.2"
-            />
-            <circle
-              className="holiday-bulb"
-              cx={x}
-              cy={y + 11}
-              r="4.6"
-              fill={color}
-              style={{
-                animationDelay: `${(i % 7) * 0.32}s`,
-                filter: `drop-shadow(0 0 7px ${color})`,
-              }}
-            />
-          </g>
-        );
-      })}
-    </svg>
+    <div ref={hostRef} className="w-full" style={{ height: HEIGHT }}>
+      {width > 0 && (
+        <svg width={width} height={HEIGHT} viewBox={`0 0 ${width} ${HEIGHT}`} aria-hidden>
+          <path
+            d={`M0,6 Q${width / 2},${6 + SAG * 2} ${width},6`}
+            fill="none"
+            stroke="rgba(16,18,22,0.5)"
+            strokeWidth="1.6"
+          />
+          {Array.from({ length: bulbs }, (_, i) => {
+            const { x, y } = point(i / (bulbs - 1));
+            const color = colors[i % colors.length];
+            return (
+              <g key={i}>
+                <line x1={x} y1={y} x2={x} y2={y + 8} stroke="rgba(16,18,22,0.45)" strokeWidth="1.2" />
+                <ellipse
+                  className="holiday-bulb"
+                  cx={x}
+                  cy={y + 14}
+                  rx="5"
+                  ry="6.4"
+                  fill={color}
+                  style={{
+                    animationDelay: `${(i % 7) * 0.32}s`,
+                    filter: `drop-shadow(0 0 8px ${color})`,
+                  }}
+                />
+              </g>
+            );
+          })}
+        </svg>
+      )}
+    </div>
   );
 }
 

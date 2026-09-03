@@ -106,7 +106,7 @@ export function ImmersiveLanding({ hero, sceneEnabled, holiday }: Props) {
 
       {/* Title — curtain/masking reveal (premium word-by-word) */}
       <div className="relative z-[4] px-5 pt-10 md:px-12 md:pt-14">
-        <h1 className="font-display select-none text-[clamp(4.8rem,15vw,12rem)] font-medium leading-[0.84] tracking-[-0.06em]">
+        <h1 className="font-display select-none text-[clamp(3.6rem,12.5vw,10rem)] font-medium leading-[0.96] tracking-[-0.055em]">
           <AnimatePresence>
             {words.map((word, i) => (
               <div key={`${word}-${i}`} className="overflow-hidden">

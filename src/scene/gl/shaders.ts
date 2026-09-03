@@ -171,12 +171,15 @@ vec3 celestial(vec2 uv, vec3 base) {
 }
 
 /** Samples a plate, letting the wind move the vegetation inside it. */
-vec4 plate(sampler2D tex, vec4 rect, vec2 uv, float windAmp, float sway) {
+vec4 plate(sampler2D tex, vec4 rect, vec2 uv, float windAmp, float sway, float bleed) {
   // windAmp arrives already expressed in this plate's own coordinates, so the
   // movement is the same handful of screen pixels however far the plate is
   // zoomed. Scaling it in plate units made the foreground churn like water.
   vec2 p = (uv - rect.xy) / rect.zw;
-  if (p.x < 0.0 || p.x > 1.0 || p.y < 0.0 || p.y > 1.0) return vec4(0.0);
+  if (p.x < 0.0 || p.x > 1.0 || p.y < 0.0 || p.y > 1.0 + bleed) return vec4(0.0);
+  // Below its last row the plate repeats that row, so its bottom edge is a
+  // smear hidden behind the wood rather than a ruled line across the valley.
+  p.y = min(p.y, 1.0);
 
   vec4 base = texture(tex, p);
   // Vegetation reads as green-dominant and mid-dark; rock, roofs and road do
@@ -299,12 +302,12 @@ void main() {
 
   float sway = sign(uWind + 0.0001);
 
-  vec4 ridge = plate(uRidge, uRidgeRect, uv, uRidgeSway, sway);
+  vec4 ridge = plate(uRidge, uRidgeRect, uv, uRidgeSway, sway, 0.6);
   if (ridge.a > 0.001) {
     color = mix(color, gradePhoto(ridge.rgb, 1.0), ridge.a);
   }
 
-  vec4 forest = plate(uForest, uForestRect, uv, uForestSway, sway);
+  vec4 forest = plate(uForest, uForestRect, uv, uForestSway, sway, 0.0);
   if (forest.a > 0.001) {
     color = mix(color, gradePhoto(forest.rgb, 0.35), forest.a);
   }
