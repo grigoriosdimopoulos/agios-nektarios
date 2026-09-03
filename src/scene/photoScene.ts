@@ -11,18 +11,36 @@
  * exactly the places where houses actually stand.
  */
 export const PHOTO_PLATES = {
-  ridge: { src: "/scene/ridge.webp", aspect: 2400 / 612 },
-  forest: { src: "/scene/forest.webp", aspect: 2400 / 222 },
+  ridge: { src: "/scene/ridge.webp", aspect: 3000 / 766 },
+  forest: { src: "/scene/forest.webp", aspect: 3000 / 278 },
+  lights: { src: "/scene/lights.webp", aspect: 3000 / 766 },
 } as const;
+
+export const RIDGE_OVERSCAN = 1.06;
+export const RIDGE_BASE_OFFSET = 0.17;
+export const FOREST_OVERSCAN = 1.9;
+export const FOREST_BASE_OFFSET = 0.42;
 
 export type PhotoLight = { x: number; y: number };
 
 /** Where the ridge plate lands on screen — shared by the backdrop and the
  *  decorations that have to sit on the houses in it. */
 export function ridgeBox(width: number, height: number, groundY: number) {
-  const drawWidth = width * 1.06;
+  const drawWidth = width * RIDGE_OVERSCAN;
   const drawHeight = drawWidth / PHOTO_PLATES.ridge.aspect;
-  const bottom = groundY + height * 0.17;
+  const bottom = groundY + height * RIDGE_BASE_OFFSET;
+  return {
+    left: (width - drawWidth) / 2,
+    top: bottom - drawHeight,
+    drawWidth,
+    drawHeight,
+  };
+}
+
+export function forestBox(width: number, height: number, groundY: number) {
+  const drawWidth = width * FOREST_OVERSCAN;
+  const drawHeight = drawWidth / PHOTO_PLATES.forest.aspect;
+  const bottom = groundY + height * FOREST_BASE_OFFSET;
   return {
     left: (width - drawWidth) / 2,
     top: bottom - drawHeight,

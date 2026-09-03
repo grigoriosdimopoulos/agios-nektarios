@@ -4,6 +4,7 @@ import { useEffect, useRef } from "react";
 
 import type { SceneSettings } from "@/lib/content/schema";
 import { createSceneEngine, type EngineOptions } from "@/scene/engine";
+import { createGLEngine } from "@/scene/glEngine";
 import type { Season } from "@/scene/calendar";
 import type { WeatherCondition, WeatherSnapshot } from "@/scene/weather";
 
@@ -39,11 +40,18 @@ export function LivingScene({ settings }: { settings: SceneSettings }) {
     const canvas = canvasRef.current;
     if (!canvas || !settings.enabled) return;
 
+    const engineOptions = toEngineOptions(settings);
     let engine: ReturnType<typeof createSceneEngine>;
     try {
-      engine = createSceneEngine(canvas, toEngineOptions(settings));
+      // The GPU path moves the photograph's own pixels; the canvas path is the
+      // fallback where WebGL2 is unavailable.
+      engine = createGLEngine(canvas, engineOptions) ?? createSceneEngine(canvas, engineOptions);
     } catch {
-      return;
+      try {
+        engine = createSceneEngine(canvas, engineOptions);
+      } catch {
+        return;
+      }
     }
 
     const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;

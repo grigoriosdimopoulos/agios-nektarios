@@ -1,10 +1,8 @@
-import { moonPosition, sunPosition } from "./astronomy";
-import { holidayOf, isResurrectionNight, seasonOf, seasonProgress, type Holiday, type Season } from "./calendar";
-import { clamp, smoothstep } from "./noise";
-import { computeLighting, css } from "./palette";
-import { sampleWind } from "./wind";
-import { FALLBACK_WEATHER, type WeatherCondition, type WeatherSnapshot } from "./weather";
-import type { Frame, Layer, Quality, SceneOptions } from "./types";
+import { smoothstep } from "./noise";
+import { css } from "./palette";
+import { createFrameSource, type EngineOptions } from "./frame";
+import { FALLBACK_WEATHER, type WeatherSnapshot } from "./weather";
+import type { Frame, Layer, Quality } from "./types";
 import { createSkyLayer } from "./layers/sky";
 import { createTerrainLayer } from "./layers/terrain";
 import { createForestLayer } from "./layers/forest";
@@ -17,78 +15,11 @@ import { createCameraLayer } from "./layers/camera";
 import { createPlateLayer } from "./layers/plates";
 import { createPhotoLayer } from "./layers/photo";
 
-export type Overrides = {
-  time: "auto" | "dawn" | "day" | "dusk" | "night";
-  weather: "auto" | WeatherCondition;
-  season: "auto" | Season;
-  holiday: string;
-};
-
-export type EngineOptions = SceneOptions & { overrides: Overrides };
+export type { Overrides, EngineOptions } from "./frame";
 
 const MAX_DT = 1 / 20;
 
-/** Picks a moment of the current day that matches a forced time-of-day. */
-function overrideDate(
-  now: Date,
-  mode: Overrides["time"],
-  latitude: number,
-  longitude: number,
-): Date {
-  if (mode === "auto") return now;
-
-  const day = new Date(now);
-  day.setHours(0, 0, 0, 0);
-
-  let best = new Date(now);
-  let bestScore = -Infinity;
-  // Scan the day in five-minute steps and keep the moment that best matches.
-  for (let minutes = 0; minutes < 24 * 60; minutes += 5) {
-    const candidate = new Date(day.getTime() + minutes * 60000);
-    const altitude = (sunPosition(candidate, latitude, longitude).altitude * 180) / Math.PI;
-    let score: number;
-    switch (mode) {
-      case "dawn":
-        // Just after sunrise, and in the morning half of the day.
-        score = -Math.abs(altitude - 3) - (minutes > 12 * 60 ? 100 : 0);
-        break;
-      case "day":
-        score = altitude;
-        break;
-      case "dusk":
-        score = -Math.abs(altitude + 2) - (minutes < 12 * 60 ? 100 : 0);
-        break;
-      case "night":
-        score = -altitude;
-        break;
-      default:
-        score = 0;
-    }
-    if (score > bestScore) {
-      bestScore = score;
-      best = candidate;
-    }
-  }
-  return best;
-}
-
-function applyWeatherOverride(
-  weather: WeatherSnapshot,
-  override: Overrides["weather"],
-): WeatherSnapshot {
-  if (override === "auto") return weather;
-  const preset: Record<WeatherCondition, Partial<WeatherSnapshot>> = {
-    clear: { cloudCover: 0.08, precipitation: 0 },
-    clouds: { cloudCover: 0.78, precipitation: 0 },
-    rain: { cloudCover: 0.9, precipitation: 2.4, humidity: 0.9 },
-    snow: { cloudCover: 0.85, precipitation: 1.2, temperature: -1 },
-    fog: { cloudCover: 0.5, precipitation: 0, humidity: 0.98 },
-    storm: { cloudCover: 0.97, precipitation: 6, windSpeed: 12, windGusts: 20 },
-  };
-  return { ...weather, ...preset[override], condition: override };
-}
-
-function detectQuality(preferred: Quality | "auto"): Quality {
+export function detectQuality(preferred: Quality | "auto"): Quality {
   if (preferred !== "auto") return preferred;
   if (typeof navigator === "undefined") return "medium";
   const cores = navigator.hardwareConcurrency ?? 4;
@@ -122,9 +53,17 @@ export function createSceneEngine(
   let running = false;
   let startedAt = performance.now();
   let lastTime = startedAt;
-  let snowCover = 0;
-  let flash = 0;
-  let nextStrike = 4 + Math.random() * 12;
+
+  const frames = createFrameSource({
+    options: () => options,
+    weather: () => weather,
+    quality: () => quality,
+  });
+
+  const size = () => ({
+    width: canvas.clientWidth || window.innerWidth,
+    height: canvas.clientHeight || window.innerHeight,
+  });
 
   const layers: Layer[] = [];
 
@@ -175,98 +114,12 @@ export function createSceneEngine(
     canvas.width = Math.round(width * dpr);
     canvas.height = Math.round(height * dpr);
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-    const next = buildFrame(0);
+    const { width: w, height: h } = size();
+    const next = frames.build(w, h, 0);
     for (const layer of layers) layer.resize?.(next);
   }
 
-  function buildFrame(dt: number): Frame {
-    const realNow = new Date();
-    const now = overrideDate(
-      realNow,
-      options.overrides.time,
-      options.latitude,
-      options.longitude,
-    );
 
-    const sun = sunPosition(now, options.latitude, options.longitude);
-    const moon = moonPosition(now, options.latitude, options.longitude);
-    const sunAltitudeDeg = (sun.altitude * 180) / Math.PI;
-
-    const activeWeather = applyWeatherOverride(weather, options.overrides.weather);
-    const season: Season =
-      options.overrides.season === "auto" ? seasonOf(now) : options.overrides.season;
-    const holiday: Holiday =
-      options.overrides.holiday === ""
-        ? holidayOf(now)
-        : (options.overrides.holiday as Holiday);
-
-    const lighting = computeLighting(sunAltitudeDeg, moon, activeWeather, season);
-    const wind = sampleWind((performance.now() - startedAt) / 1000, activeWeather);
-
-    const width = canvas.clientWidth || window.innerWidth;
-    const height = canvas.clientHeight || window.innerHeight;
-    const horizonY = height * 0.58;
-    const groundY = height * 0.62;
-
-    // Sun and moon are placed as if the camera looks due south: the azimuth is
-    // measured from south, so the sun rises on the left and sets on the right.
-    const project = (altitude: number, azimuth: number) => {
-      const span = (140 * Math.PI) / 180;
-      const x = width * (0.5 + clamp(azimuth / span, -0.75, 0.75));
-      const y = horizonY - (altitude / (Math.PI / 2)) * horizonY * 1.1;
-      return { x, y };
-    };
-
-    return {
-      time: (performance.now() - startedAt) / 1000,
-      dt,
-      width,
-      height,
-      horizonY,
-      groundY,
-      lighting,
-      wind,
-      weather: activeWeather,
-      season,
-      seasonT: seasonProgress(now),
-      holiday,
-      resurrectionNight:
-        holiday === "easter" &&
-        (options.overrides.holiday !== "" || isResurrectionNight(realNow)),
-      sun,
-      moon,
-      sunScreen: project(sun.altitude, sun.azimuth),
-      moonScreen: project(moon.altitude, moon.azimuth),
-      quality,
-      intensity: options.intensity,
-      snowCover,
-      flash,
-      now,
-    };
-  }
-
-  function updateEnvironment(next: Frame) {
-    // Lying snow builds while it snows and melts once it is above freezing.
-    const target =
-      next.weather.condition === "snow"
-        ? 0.85
-        : next.weather.temperature < 1 && next.season === "winter"
-          ? 0.3
-          : 0;
-    const rate = target > snowCover ? 0.035 : 0.02;
-    snowCover += clamp(target - snowCover, -1, 1) * rate * next.dt * 8;
-    snowCover = clamp(snowCover);
-
-    // Lightning during a storm briefly lights the whole valley.
-    if (next.weather.condition === "storm") {
-      nextStrike -= next.dt;
-      if (nextStrike <= 0) {
-        nextStrike = 3 + Math.random() * 14;
-        flash = 1;
-      }
-    }
-    flash = Math.max(0, flash - next.dt * 3.4);
-  }
 
   function atmosphere(next: Frame) {
     const { lighting } = next;
@@ -301,8 +154,8 @@ export function createSceneEngine(
   }
 
   function renderFrame(dt: number) {
-    const next = buildFrame(dt);
-    updateEnvironment(next);
+    const { width: w, height: h } = size();
+    const next = frames.build(w, h, dt);
 
     for (const layer of layers) layer.update?.(next);
 
