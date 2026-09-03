@@ -1,6 +1,6 @@
-import { clamp, mulberry32, smoothstep } from "../noise";
-import { css, mix, scale, type RGB } from "../palette";
-import { HOUSE_LIGHTS, PHOTO_PLATES, ridgeBox } from "../photoScene";
+import { clamp } from "../noise";
+import { css, mix, scale } from "../palette";
+import { PHOTO_PLATES, ridgeBox } from "../photoScene";
 
 const PHOTO_ASPECT_RIDGE = PHOTO_PLATES.ridge.aspect;
 import type { Frame, Layer } from "../types";
@@ -32,14 +32,6 @@ export function createPhotoLayer(band: Band): Layer {
   const octx = offscreen.getContext("2d");
   let gradedKey = "";
   let gradedAt = 0;
-
-  const random = mulberry32(4711);
-  // Each house keeps its own evening habits for the life of the page.
-  const schedule = HOUSE_LIGHTS.map(() => ({
-    offset: random(),
-    stamina: random(),
-    warmth: random(),
-  }));
 
   function geometry(frame: Frame) {
     // A very slow push-in, about one percent over a minute and a half. Too
@@ -137,48 +129,6 @@ export function createPhotoLayer(band: Band): Layer {
     octx.globalCompositeOperation = "source-over";
   }
 
-  function drawHouseLights(ctx: CanvasRenderingContext2D, frame: Frame, box: ReturnType<typeof geometry>) {
-    const night = frame.lighting.artificialLight;
-    if (night <= 0.03) return;
-
-    const hour = frame.now.getHours() + frame.now.getMinutes() / 60;
-    const radius = Math.max(1.4, frame.width * 0.0016);
-
-    for (let i = 0; i < HOUSE_LIGHTS.length; i++) {
-      const light = HOUSE_LIGHTS[i];
-      const habit = schedule[i];
-
-      const evening = smoothstep(16.5 + habit.offset, 19 + habit.offset, hour);
-      const late =
-        hour >= 22
-          ? 1 - smoothstep(22 + habit.stamina * 2.5, 24.5 + habit.stamina * 2, hour)
-          : 1;
-      const earlyMorning =
-        hour < 8 ? smoothstep(5.2 + habit.offset * 1.5, 7, hour) * 0.75 : 0;
-      const glow = clamp(Math.max(evening * late, earlyMorning) * night);
-      if (glow < 0.04) continue;
-
-      const x = box.left + light.x * box.drawWidth;
-      const y = box.top + light.y * box.drawHeight;
-      const warm: RGB = habit.warmth > 0.85 ? [188, 214, 255] : [255, 196, 116];
-
-      ctx.save();
-      ctx.globalCompositeOperation = "lighter";
-      const halo = ctx.createRadialGradient(x, y, 0, x, y, radius * 9);
-      halo.addColorStop(0, css(warm, 0.5 * glow));
-      halo.addColorStop(1, css(warm, 0));
-      ctx.fillStyle = halo;
-      ctx.beginPath();
-      ctx.arc(x, y, radius * 9, 0, Math.PI * 2);
-      ctx.fill();
-
-      ctx.fillStyle = css(mix(warm, [255, 255, 240], 0.4), 0.9 * glow);
-      ctx.beginPath();
-      ctx.arc(x, y, radius, 0, Math.PI * 2);
-      ctx.fill();
-      ctx.restore();
-    }
-  }
 
   return {
     name: `photo-${band}`,
@@ -205,7 +155,6 @@ export function createPhotoLayer(band: Band): Layer {
       }
 
       ctx.drawImage(offscreen, box.left, box.top, box.drawWidth, box.drawHeight);
-      if (band === "ridge") drawHouseLights(ctx, frame, box);
     },
   };
 }

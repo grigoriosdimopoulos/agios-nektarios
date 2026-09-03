@@ -59,7 +59,6 @@ uniform float uTime;
 
 uniform sampler2D uRidge;
 uniform sampler2D uForest;
-uniform sampler2D uLights;
 
 uniform vec4 uRidgeRect;    // x, y, w, h in screen UV
 uniform vec4 uForestRect;
@@ -91,10 +90,6 @@ uniform float uSnow;
 uniform float uSnowCover;
 uniform float uFlash;
 uniform float uHorizonY;     // screen UV
-uniform vec3 uLightSchedule; // how lit each of the three house groups is
-uniform vec3 uLightTintA;    // colour of each group's windows
-uniform vec3 uLightTintB;
-uniform vec3 uLightTintC;
 uniform vec3 uSeasonTint;    // the colour the year lends the landscape
 uniform float uSeasonDry;    // how far the green has gone to straw
 uniform float uBirds;
@@ -224,15 +219,6 @@ vec3 gradePhoto(vec3 color, float distance) {
   return color;
 }
 
-vec3 houseLights(vec2 uv, vec3 base) {
-  vec2 p = (uv - uRidgeRect.xy) / uRidgeRect.zw;
-  if (p.x < 0.0 || p.x > 1.0 || p.y < 0.0 || p.y > 1.0) return base;
-  vec3 lamps = texture(uLights, p).rgb;
-  vec3 add = uLightTintA * lamps.r * uLightSchedule.r
-           + uLightTintB * lamps.g * uLightSchedule.g
-           + uLightTintC * lamps.b * uLightSchedule.b;
-  return base + add * uNight * 0.5;
-}
 
 /**
  * Rain crosses the frame in a fraction of a second. Cells are tall and thin so
@@ -317,7 +303,6 @@ void main() {
   if (ridge.a > 0.001) {
     color = mix(color, gradePhoto(ridge.rgb, 1.0), ridge.a);
   }
-  color = houseLights(uv, color);
 
   vec4 forest = plate(uForest, uForestRect, uv, uForestSway, sway);
   if (forest.a > 0.001) {

@@ -13,7 +13,6 @@
 export const PHOTO_PLATES = {
   ridge: { src: "/scene/ridge.webp", aspect: 3000 / 766 },
   forest: { src: "/scene/forest.webp", aspect: 3000 / 278 },
-  lights: { src: "/scene/lights.webp", aspect: 3000 / 766 },
 } as const;
 
 export type PhotoLight = { x: number; y: number };

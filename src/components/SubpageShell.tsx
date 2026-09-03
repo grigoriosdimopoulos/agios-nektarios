@@ -1,7 +1,9 @@
 import Link from "next/link";
 
 import type { SiteSettings } from "@/lib/content/schema";
+import { currentHoliday } from "@/lib/currentHoliday";
 import { AmbientBackdrop } from "./AmbientBackdrop";
+import { HolidayDressing } from "./HolidayDressing";
 import { LegacyHtmlBody } from "./LegacyHtmlBody";
 import { LivingScene } from "./LivingScene";
 import { SiteFooter } from "./SiteFooter";
@@ -18,6 +20,7 @@ export function SubpageShell({ html, settings }: Props) {
       ) : (
         <AmbientBackdrop variant="subtle" />
       )}
+      <HolidayDressing holiday={currentHoliday(settings)} />
       {/* Minimal subpage header — just brand + back link */}
       <header className="fixed inset-x-0 top-0 z-50 flex items-center justify-between bg-[linear-gradient(180deg,rgba(7,8,9,0.75),transparent)] px-6 pb-6 pt-5 md:px-10 md:pt-6">
         <Link

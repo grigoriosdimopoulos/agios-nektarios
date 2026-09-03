@@ -1,6 +1,7 @@
 import type { HomeContent, SiteSettings } from "@/lib/content/schema";
 import { HOLIDAY_BADGES } from "@/lib/holidayLabel";
-import { holidayOf, type Holiday } from "@/scene/calendar";
+import { currentHoliday } from "@/lib/currentHoliday";
+import { HolidayDressing } from "./HolidayDressing";
 import { AmbientBackdrop } from "./AmbientBackdrop";
 import { HomeSections } from "./HomeSections";
 import { ImmersiveLanding } from "./ImmersiveLanding";
@@ -16,9 +17,8 @@ export function HomePageClient({
   settings: SiteSettings;
 }) {
   const sceneEnabled = settings.scene.enabled;
-  const override = settings.scene.override.holiday;
-  const holiday: Holiday = override === "" ? holidayOf(new Date()) : (override as Holiday);
-  const badge = settings.scene.holidayThemes ? HOLIDAY_BADGES[holiday] ?? null : null;
+  const holiday = currentHoliday(settings);
+  const badge = HOLIDAY_BADGES[holiday] ?? null;
 
   return (
     <>
@@ -27,6 +27,7 @@ export function HomePageClient({
       ) : (
         <AmbientBackdrop />
       )}
+      <HolidayDressing holiday={holiday} />
       <ScrollProgressBar />
       <a
         href="#main-content"

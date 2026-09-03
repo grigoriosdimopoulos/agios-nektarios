@@ -43,14 +43,13 @@ function link(gl: WebGL2RenderingContext, fragment: string, names: string[]): Pr
 }
 
 const SCENE_UNIFORMS = [
-  "uResolution", "uTime", "uRidge", "uForest", "uLights",
+  "uResolution", "uTime", "uRidge", "uForest",
   "uRidgeRect", "uForestRect",
   "uZenith", "uHorizon", "uSunColor", "uMoonColor", "uHazeColor", "uAmbient",
   "uSunPos", "uMoonPos", "uSunIntensity", "uMoonIntensity",
   "uMoonUp", "uMoonIllum", "uMoonWaxing",
   "uAmbientIntensity", "uGolden", "uHazeDensity", "uStarVisibility", "uNight",
   "uWind", "uCloudCover", "uRain", "uSnow", "uSnowCover", "uFlash", "uHorizonY",
-  "uLightSchedule", "uLightTintA", "uLightTintB", "uLightTintC",
   "uSeasonTint", "uSeasonDry", "uBirds", "uRidgeSway", "uForestSway",
 ];
 
@@ -59,20 +58,6 @@ const POST_UNIFORMS = [
   "uNight", "uGrain", "uRays",
 ];
 
-/** Windows are three groups of houses, each keeping its own hours. */
-function lightSchedule(frame: Frame): [number, number, number] {
-  const hour = frame.now.getHours() + frame.now.getMinutes() / 60;
-  const groups: [number, number, number] = [0, 0, 0];
-  const offsets = [0.1, 0.7, 1.4];
-  const stamina = [0.4, 1.6, 2.8];
-  for (let i = 0; i < 3; i++) {
-    const evening = smoothstep(16.6 + offsets[i], 19.2 + offsets[i], hour);
-    const late = hour >= 22 ? 1 - smoothstep(22 + stamina[i], 25 + stamina[i], hour) : 1;
-    const morning = hour < 8 ? smoothstep(5.3 + offsets[i], 7, hour) * 0.75 : 0;
-    groups[i] = clamp(Math.max(evening * late, morning));
-  }
-  return groups;
-}
 
 type Tint = [number, number, number];
 
@@ -83,26 +68,7 @@ const SEASON_GRADE: Record<Season, { tint: Tint; dry: number }> = {
   autumn: { tint: [1.14, 0.94, 0.78], dry: 1 },
   winter: { tint: [0.9, 0.96, 1.12], dry: 0.3 },
 };
-const WARM: Tint = [1, 0.72, 0.42];
 
-/** Holidays are expressed only as the colour of the village's lamps. */
-function lightTints(frame: Frame): [Tint, Tint, Tint] {
-  switch (frame.holiday) {
-    // Kept close to warm white: a village at night is lamps with a hint of
-    // colour, not a string of poster paint.
-    case "christmas":
-    case "newyear":
-      return [[1, 0.6, 0.5], [0.72, 0.95, 0.72], WARM];
-    case "independence":
-    case "ohi":
-      return [[0.6, 0.75, 1], [0.98, 0.98, 1], [0.6, 0.75, 1]];
-    case "easter":
-    case "patron":
-      return [WARM, [1, 0.86, 0.6], WARM];
-    default:
-      return [WARM, WARM, WARM];
-  }
-}
 
 export type GLRenderer = {
   resize: (width: number, height: number, dpr: number) => void;
@@ -174,7 +140,6 @@ export function createGLRenderer(canvas: HTMLCanvasElement): GLRenderer | null {
 
   const ridgeTex = loadTexture(PHOTO_PLATES.ridge.src);
   const forestTex = loadTexture(PHOTO_PLATES.forest.src);
-  const lightsTex = loadTexture(PHOTO_PLATES.lights.src);
 
   // Offscreen target for the scene pass, mipmapped so the lens pass gets its
   // blur for free.
@@ -230,8 +195,6 @@ export function createGLRenderer(canvas: HTMLCanvasElement): GLRenderer | null {
       // Sway is authored in screen pixels and converted per plate, so a plate
       // zoomed in on a tall window does not swing further than a wide one.
       const swayPixels = 2.2 + 6.0 * Math.abs(frame.wind.force);
-      const schedule = lightSchedule(frame);
-      const [tintA, tintB, tintC] = lightTints(frame);
       const u = scene.uniforms;
 
       gl.bindFramebuffer(gl.FRAMEBUFFER, fbo);
@@ -245,9 +208,6 @@ export function createGLRenderer(canvas: HTMLCanvasElement): GLRenderer | null {
       gl.activeTexture(gl.TEXTURE1);
       gl.bindTexture(gl.TEXTURE_2D, forestTex);
       gl.uniform1i(u.uForest, 1);
-      gl.activeTexture(gl.TEXTURE2);
-      gl.bindTexture(gl.TEXTURE_2D, lightsTex);
-      gl.uniform1i(u.uLights, 2);
 
       gl.uniform2f(u.uResolution, canvas.width, canvas.height);
       gl.uniform1f(u.uTime, frame.time);
@@ -285,10 +245,6 @@ export function createGLRenderer(canvas: HTMLCanvasElement): GLRenderer | null {
       gl.uniform1f(u.uSnow, frame.weather.condition === "snow" ? frame.intensity : 0);
       gl.uniform1f(u.uSnowCover, frame.snowCover);
       gl.uniform1f(u.uFlash, frame.flash);
-      gl.uniform3f(u.uLightSchedule, schedule[0], schedule[1], schedule[2]);
-      gl.uniform3fv(u.uLightTintA, tintA);
-      gl.uniform3fv(u.uLightTintB, tintB);
-      gl.uniform3fv(u.uLightTintC, tintC);
 
       gl.uniform1f(u.uRidgeSway, (swayPixels * 0.3) / ridge.drawWidth);
       gl.uniform1f(u.uForestSway, swayPixels / forest.drawWidth);
@@ -335,7 +291,6 @@ export function createGLRenderer(canvas: HTMLCanvasElement): GLRenderer | null {
       gl.deleteVertexArray(vao);
       gl.deleteTexture(ridgeTex);
       gl.deleteTexture(forestTex);
-      gl.deleteTexture(lightsTex);
       gl.deleteTexture(sceneTex);
       gl.deleteFramebuffer(fbo);
     },

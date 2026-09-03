@@ -193,3 +193,17 @@ body {
   .depth-layer      { transform: none !important; }
   .cursor-spotlight { background: none !important; }
 }
+
+/* ── Feast days ─────────────────────────────────────────────────────────────── */
+@media (prefers-reduced-motion: no-preference) {
+  @keyframes holiday-bulb {
+    0%, 100% { opacity: 0.42; }
+    50%       { opacity: 1; }
+  }
+
+  .holiday-bulb { animation: holiday-bulb 3.4s ease-in-out infinite; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .holiday-bulb { opacity: 0.85; }
+}

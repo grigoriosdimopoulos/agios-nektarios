@@ -335,22 +335,21 @@ export function createHolidayLayer({ anchored = false, lightsOnly = false } = {}
       switch (frame.holiday) {
         case "independence":
         case "ohi":
-          // A drawn flag next to a photograph is a sticker. On the photo the
-          // national days are marked by blue and white lamps in the village.
-          if (lightsOnly) drawChristmas(ctx, frame, [GREEK_BLUE, GREEK_WHITE]);
-          else for (const pole of poles) drawFlag(ctx, frame, pole);
+          // The settlement has no street lighting, so a feast day is dressed
+          // in the page rather than in the valley.
+          if (!lightsOnly) for (const pole of poles) drawFlag(ctx, frame, pole);
           break;
         case "christmas":
-          drawChristmas(ctx, frame);
+          if (!lightsOnly) drawChristmas(ctx, frame);
           break;
         case "newyear":
-          drawChristmas(ctx, frame);
+          if (!lightsOnly) drawChristmas(ctx, frame);
           drawFireworks(ctx, frame);
           break;
         case "easter":
           // Candles are light, so they survive next to a photograph; they are
           // simply small and gathered by the church.
-          drawCandles(
+          if (!lightsOnly) drawCandles(
             ctx,
             frame,
             frame.resurrectionNight ? 1 : frame.lighting.artificialLight * 0.5,
@@ -358,7 +357,7 @@ export function createHolidayLayer({ anchored = false, lightsOnly = false } = {}
           drawFireworks(ctx, frame);
           break;
         case "patron":
-          drawCandles(ctx, frame, frame.lighting.artificialLight * 0.75);
+          if (!lightsOnly) drawCandles(ctx, frame, frame.lighting.artificialLight * 0.75);
           break;
         default:
           break;
