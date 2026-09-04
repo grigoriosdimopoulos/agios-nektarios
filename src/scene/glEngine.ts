@@ -16,7 +16,7 @@ export function createGLEngine(
   canvas: HTMLCanvasElement,
   initialOptions: EngineOptions,
 ): SceneEngine | null {
-  const renderer = createGLRenderer(canvas);
+  const renderer = createGLRenderer(canvas, () => options);
   if (!renderer) return null;
 
   let options = initialOptions;

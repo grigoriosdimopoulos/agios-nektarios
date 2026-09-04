@@ -179,7 +179,7 @@ export function SettingsForm({ initial }: { initial: SiteSettings }) {
 
       <Panel
         title="Ζωντανό σκηνικό"
-        description="Το φόντο ακολουθεί την πραγματική ώρα, τον καιρό και την εποχή στον Άγιο Νεκτάριο Κιθαιρώνα."
+        description="Φωτογραφία του οικισμού που ακολουθεί την πραγματική ώρα, τον καιρό και την εποχή. Ο άνεμος κουνά τα ίδια τα πεύκα της φωτογραφίας."
       >
         <div className="space-y-5">
           <Toggle
@@ -195,20 +195,14 @@ export function SettingsForm({ initial }: { initial: SiteSettings }) {
             onChange={(liveWeather) => setScene({ liveWeather })}
           />
           <Toggle
-            label="Ζώα και πουλιά"
-            hint="Πουλιά την ημέρα, κουκουβάγιες και νυχτερίδες τη νύχτα, έντομα την άνοιξη."
+            label="Πουλιά"
+            hint="Σμήνος περνά τον ουρανό κάθε λίγο, πιο συχνά την αυγή."
             checked={settings.scene.wildlife}
             onChange={(wildlife) => setScene({ wildlife })}
           />
           <Toggle
-            label="Οικισμός"
-            hint="Σπίτια με φώτα, καμινάδες και αυτοκίνητα στον δρόμο."
-            checked={settings.scene.village}
-            onChange={(village) => setScene({ village })}
-          />
-          <Toggle
-            label="Εορταστικά θέματα"
-            hint="25η Μαρτίου, 28η Οκτωβρίου, Χριστούγεννα, Πρωτοχρονιά, Πάσχα."
+            label="Εορταστικός στολισμός"
+            hint="Κορδέλα και γιρλάντα στο πάνω μέρος της σελίδας· σημαία στις εθνικές επετείους."
             checked={settings.scene.holidayThemes}
             onChange={(holidayThemes) => setScene({ holidayThemes })}
           />

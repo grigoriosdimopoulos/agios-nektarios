@@ -84,7 +84,10 @@ export type GLRenderer = {
  * move the photograph's own pixels. The pines really sway; nothing is drawn
  * over them.
  */
-export function createGLRenderer(canvas: HTMLCanvasElement): GLRenderer | null {
+export function createGLRenderer(
+  canvas: HTMLCanvasElement,
+  readOptions: () => { wildlife: boolean },
+): GLRenderer | null {
   const gl = canvas.getContext("webgl2", {
     alpha: false,
     antialias: false,
@@ -171,6 +174,7 @@ export function createGLRenderer(canvas: HTMLCanvasElement): GLRenderer | null {
     },
 
     render(frame) {
+      const options = readOptions();
       if (bufferWidth !== canvas.width || bufferHeight !== canvas.height) {
         resizeBuffer(canvas.width, canvas.height);
       }
@@ -257,7 +261,9 @@ export function createGLRenderer(canvas: HTMLCanvasElement): GLRenderer | null {
       const dawn = smoothstep(4.8, 6.8, hour) * (1 - smoothstep(9, 11.5, hour));
       gl.uniform1f(
         u.uBirds,
-        clamp(Math.max(dawn, lighting.dayFactor * 0.55) * (1 - frame.weather.cloudCover * 0.4)),
+        options.wildlife
+          ? clamp(Math.max(dawn, lighting.dayFactor * 0.55) * (1 - frame.weather.cloudCover * 0.4))
+          : 0,
       );
 
       gl.drawArrays(gl.TRIANGLES, 0, 3);
