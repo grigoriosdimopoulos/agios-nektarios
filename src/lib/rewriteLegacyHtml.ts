@@ -31,6 +31,8 @@ function rewriteHref(href: string): string {
     raw.startsWith("http://") ||
     raw.startsWith("https://") ||
     raw.startsWith("mailto:") ||
+    raw.startsWith("tel:") ||
+    raw.startsWith("/") ||
     raw.startsWith("#") ||
     raw.startsWith("javascript:")
   ) {
@@ -64,6 +66,7 @@ export function rewriteLegacyHtml(html: string): string {
           u.startsWith("http://") ||
           u.startsWith("https://") ||
           u.startsWith("data:") ||
+          u.startsWith("/") ||
           u.startsWith("//")
         ) {
           return match;

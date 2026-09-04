@@ -17,30 +17,30 @@ const SIDEBAR_NEWS = [
     href: "/PPKnews",
     label: "Πνευματικό & Πολιτιστικό Κέντρο (ΠΠΚ)",
   },
-  { href: "/Church-news", label: "Νέα Τρίκλιτου Ναού" },
+  { href: "/Church-news", label: "Ο τρίκλιτος ναός μας" },
   {
     href: "https://mandras-eidyllias.gr/",
     label: "Νέα Δήμου",
     external: true,
   },
   {
-    href: "https://www.agiosnektarios.gr/Settlers-registration.doc",
-    label: "Μητρώο Οικιστών",
+    href: "http://www.agiosnektarios.gr/Settlers-registration.pdf",
+    label: "Μητρώο οικιστών",
     external: true,
   },
-  { href: "/Documents", label: "Καταστατικό & Πρακτικά" },
+  { href: "/Documents", label: "Καταστατικό & πρακτικά" },
 ];
 
 const FOLKLORE = [
   { href: "/Agios_Nektarios", label: "Άγιος Νεκτάριος" },
   { href: "/Agios_Fanourios", label: "Άγιος Φανούριος" },
   { href: "/Agia_Marina", label: "Αγία Μαρίνα" },
-  { href: "/Under-Construction", label: "Όσιος Μελέτιος" },
+  { href: "/Church-news", label: "Ο ναός μας" },
   { href: "/Hercules", label: "Ηρακλής" },
   { href: "/The-Furies", label: "Ερινύες" },
   { href: "/Egosthena_Fortress", label: "Φρούριο Αιγοσθενών" },
   { href: "/Eleftheres_Castle", label: "Κάστρο Ελευθερών" },
-  { href: "/Under-Construction", label: "Κιθαιρώνας" },
+  { href: "/Under-Construction", label: "Όσιος Μελέτιος & Κιθαιρώνας" },
 ];
 
 type Props = {

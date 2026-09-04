@@ -182,6 +182,202 @@ body {
 .legacy-prose img   { max-width: 100%; height: auto; border-radius: 2px; }
 .legacy-prose font  { color: inherit !important; }
 
+
+/* Rewritten inner pages — headings, ledes, figures, archive grids. */
+.legacy-prose h1 {
+  font-family: var(--font-display), ui-serif, serif;
+  font-weight: 600;
+  font-size: clamp(2.1rem, 5.6vw, 3.35rem);
+  line-height: 1.04;
+  letter-spacing: -0.035em;
+  color: var(--ivory);
+  margin: 0 0 1.15rem;
+  text-wrap: balance;
+}
+
+.legacy-prose h2 {
+  font-family: var(--font-display), ui-serif, serif;
+  font-weight: 600;
+  font-size: clamp(1.3rem, 2.6vw, 1.65rem);
+  letter-spacing: -0.022em;
+  color: var(--ivory);
+  margin: 2.9rem 0 0.9rem;
+  text-wrap: balance;
+}
+
+.lp-kicker {
+  font-family: var(--font-body), system-ui, sans-serif;
+  font-size: 0.66rem;
+  text-transform: uppercase;
+  letter-spacing: 0.3em;
+  color: rgba(154, 123, 82, 0.85);
+  margin: 0 0 1.05rem;
+}
+
+.lp-lede {
+  font-family: var(--font-display), ui-serif, serif;
+  font-size: clamp(1.14rem, 2.1vw, 1.38rem);
+  line-height: 1.62;
+  color: rgba(232, 228, 214, 0.94);
+  margin-bottom: 1.6rem;
+  text-wrap: pretty;
+}
+
+.lp-rule {
+  border: 0;
+  height: 1px;
+  background: linear-gradient(
+    90deg,
+    rgba(154, 123, 82, 0.5),
+    rgba(232, 228, 214, 0.06) 55%,
+    transparent
+  );
+  margin: 2.4rem 0 2.6rem;
+}
+
+.legacy-prose figure { margin: 2.4rem 0; }
+
+.legacy-prose figure img {
+  display: block;
+  width: 100%;
+  border: 1px solid rgba(232, 228, 214, 0.08);
+  box-shadow: 0 26px 70px rgba(0, 0, 0, 0.42);
+}
+
+.legacy-prose figure.lp-portrait { max-width: 22rem; }
+
+.legacy-prose figcaption {
+  margin-top: 0.72rem;
+  font-size: 0.78rem;
+  letter-spacing: 0.02em;
+  color: rgba(232, 228, 214, 0.5);
+}
+
+.legacy-prose blockquote {
+  margin: 2rem 0;
+  padding-left: 1.35rem;
+  border-left: 2px solid rgba(154, 123, 82, 0.55);
+  font-family: var(--font-display), ui-serif, serif;
+  font-size: 1.13rem;
+  line-height: 1.66;
+  color: rgba(232, 228, 214, 0.92);
+}
+
+.legacy-prose blockquote p:last-child { margin-bottom: 0; }
+
+.legacy-prose blockquote cite {
+  display: block;
+  margin-top: 0.7rem;
+  font-family: var(--font-body), system-ui, sans-serif;
+  font-size: 0.74rem;
+  font-style: normal;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: rgba(232, 228, 214, 0.42);
+}
+
+.legacy-prose ol {
+  list-style: none;
+  counter-reset: lp-athlos;
+  padding: 0;
+  margin: 1.6rem 0;
+}
+
+.legacy-prose ol > li {
+  counter-increment: lp-athlos;
+  position: relative;
+  padding-left: 3rem;
+  margin-bottom: 1.15rem;
+}
+
+.legacy-prose ol > li::before {
+  content: counter(lp-athlos, decimal-leading-zero);
+  position: absolute;
+  left: 0;
+  top: 0.32em;
+  font-family: var(--font-body), system-ui, sans-serif;
+  font-size: 0.7rem;
+  letter-spacing: 0.14em;
+  color: rgba(154, 123, 82, 0.9);
+}
+
+.legacy-prose ol > li strong {
+  display: block;
+  font-family: var(--font-display), ui-serif, serif;
+  font-weight: 600;
+  color: var(--ivory);
+  margin-bottom: 0.1rem;
+}
+
+/* Archive grids — newspaper issues, minutes, phone lists. */
+.legacy-prose ul.lp-grid,
+.lp-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(11rem, 1fr));
+  gap: 0.6rem;
+  margin: 1.4rem 0 2.2rem;
+  padding: 0;
+  list-style: none;
+}
+
+.legacy-prose ul.lp-grid > li,
+.lp-grid li { margin: 0; }
+
+.lp-grid a {
+  display: block;
+  height: 100%;
+  padding: 0.82rem 0.95rem;
+  border: 1px solid rgba(232, 228, 214, 0.09);
+  background: rgba(232, 228, 214, 0.022);
+  text-decoration: none;
+  font-size: 0.9rem;
+  font-weight: 500;
+  color: rgba(232, 228, 214, 0.86);
+  transition:
+    border-color 0.35s var(--ease-sacred),
+    background 0.35s var(--ease-sacred),
+    color 0.35s var(--ease-sacred);
+}
+
+.lp-grid a:hover {
+  border-color: rgba(154, 123, 82, 0.6);
+  background: rgba(154, 123, 82, 0.08);
+  color: var(--ivory);
+}
+
+.lp-grid a span {
+  display: block;
+  margin-top: 0.22rem;
+  font-size: 0.68rem;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: rgba(232, 228, 214, 0.38);
+}
+
+.lp-note {
+  margin-top: 3rem;
+  padding-top: 1.3rem;
+  border-top: 1px solid rgba(232, 228, 214, 0.08);
+  font-size: 0.82rem;
+  line-height: 1.7;
+  color: rgba(232, 228, 214, 0.46);
+}
+
+.lp-note a { font-weight: 400; }
+
+.lp-contact {
+  margin: 1.6rem 0 2.4rem;
+  padding: 1.5rem 1.6rem;
+  border: 1px solid rgba(232, 228, 214, 0.09);
+  background: rgba(232, 228, 214, 0.022);
+}
+
+.lp-contact p { margin-bottom: 0.35rem; }
+
+.lp-contact p:last-child { margin-bottom: 0; }
+
+.lp-contact .lp-kicker { margin-bottom: 0.7rem; }
+
 /* ── Accessibility ──────────────────────────────────────────────────────────── */
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after {
