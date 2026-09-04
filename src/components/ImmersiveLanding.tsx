@@ -160,7 +160,7 @@ export function ImmersiveLanding({ hero, sceneEnabled, holiday }: Props) {
         className="pointer-events-none absolute bottom-10 right-8 z-[5] flex flex-col items-end gap-2 md:bottom-14 md:right-12"
       >
         <span className="font-body text-[0.57rem] uppercase tracking-[0.32em] text-[rgba(232,228,214,0.2)]">
-          Scroll
+          Κυλήστε
         </span>
         <motion.span
           animate={{ scaleY: [1, 1.4, 1], opacity: [0.5, 1, 0.5] }}
