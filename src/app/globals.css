@@ -374,6 +374,89 @@ body {
   .legacy-prose figure.lp-plate figcaption { margin-inline: 3.5rem; }
 }
 
+/* Artworks and photographs sourced from open collections. Unlike the plates,
+   these are never masked or graded — a vase painting has to be seen as it is. */
+.legacy-prose figure.lp-art {
+  margin: 3rem 0;
+}
+
+@media (min-width: 900px) {
+  .legacy-prose figure.lp-art { margin-inline: -3.5rem; }
+  .legacy-prose figure.lp-art figcaption { margin-inline: 3.5rem; }
+}
+
+.legacy-prose figure.lp-art img {
+  display: block;
+  width: 100%;
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
+}
+
+.legacy-prose figure.lp-art--portrait {
+  max-width: 23rem;
+  margin-inline: 0;
+}
+
+@media (min-width: 900px) {
+  .legacy-prose figure.lp-art--portrait,
+  .legacy-prose figure.lp-art--portrait figcaption { margin-inline: 0; }
+}
+
+/* Before and after, side by side. */
+.legacy-prose figure.lp-pair {
+  margin: 3rem 0;
+}
+
+@media (min-width: 900px) {
+  .legacy-prose figure.lp-pair { margin-inline: -3.5rem; }
+}
+
+.lp-pair-grid {
+  display: grid;
+  gap: 0.75rem;
+  grid-template-columns: 1fr;
+}
+
+@media (min-width: 700px) {
+  .lp-pair-grid { grid-template-columns: 1fr 1fr; }
+}
+
+.lp-pair-grid img {
+  display: block;
+  width: 100%;
+  border: 1px solid rgba(232, 228, 214, 0.08);
+  border-radius: 0;
+  box-shadow: none;
+}
+
+.lp-pair-grid p {
+  margin: 0.5rem 0 0;
+  font-size: 0.72rem;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: rgba(154, 123, 82, 0.85);
+}
+
+@media (min-width: 900px) {
+  .legacy-prose figure.lp-pair > figcaption { margin-inline: 3.5rem; }
+}
+
+/* Credit line under an image — quieter than the caption above it. */
+.lp-credit {
+  display: block;
+  margin-top: 0.35rem;
+  font-size: 0.7rem;
+  letter-spacing: 0.01em;
+  color: rgba(232, 228, 214, 0.3);
+}
+
+.lp-credit a {
+  color: inherit;
+  font-weight: 400;
+  text-decoration-color: rgba(154, 123, 82, 0.3);
+}
+
 /* Checklists — the fire-season and winter drills. */
 .legacy-prose ul.lp-check {
   list-style: none;
