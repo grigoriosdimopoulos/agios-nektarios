@@ -222,17 +222,26 @@ export function HomeSections({ content }: { content: HomeContent }) {
               <p className={lbl}>{event.label}</p>
               <h2 className={`${ttl} mt-3 text-[1.55rem] md:text-[1.8rem]`}>{event.title}</h2>
               <p className={`${bdy} mt-5`}>{event.text}</p>
-              {event.linkHref && (
-                <a
-                  href={event.linkHref}
-                  className="mt-6 inline-flex items-center gap-2 font-body text-sm text-[rgba(154,123,82,0.8)] transition hover:text-[rgba(232,228,214,0.88)]"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                >
-                  <span>{event.linkLabel}</span>
-                  <span>↗</span>
-                </a>
-              )}
+              {event.linkHref &&
+                (/^https?:/i.test(event.linkHref) ? (
+                  <a
+                    href={event.linkHref}
+                    className="mt-6 inline-flex items-center gap-2 font-body text-sm text-[rgba(154,123,82,0.8)] transition hover:text-[rgba(232,228,214,0.88)]"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                  >
+                    <span>{event.linkLabel}</span>
+                    <span>↗</span>
+                  </a>
+                ) : (
+                  <Link
+                    href={event.linkHref}
+                    className="mt-6 inline-flex items-center gap-2 font-body text-sm text-[rgba(154,123,82,0.8)] transition hover:text-[rgba(232,228,214,0.88)]"
+                  >
+                    <span>{event.linkLabel}</span>
+                    <span>→</span>
+                  </Link>
+                ))}
             </div>
             {event.imageUrl && (
               <motion.div

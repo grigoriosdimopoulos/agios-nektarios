@@ -7,12 +7,15 @@ import { useCallback, useEffect, useRef, useState } from "react";
 
 const PRIMARY = [
   { href: "/", label: "Αρχική" },
+  { href: "/Kithaironas", label: "Το βουνό" },
+  { href: "/Pyroprostasia", label: "Πυροπροστασία" },
   { href: "/Newspaper", label: "Εφημερίδα" },
-  { href: "/Weather", label: "Καιρός" },
   { href: "/Contact", label: "Επικοινωνία" },
 ];
 
 const SIDEBAR_NEWS = [
+  { href: "/Pyroprostasia", label: "Πυροπροστασία & χειμώνας" },
+  { href: "/Weather", label: "Ο καιρός στον Κιθαιρώνα" },
   {
     href: "/PPKnews",
     label: "Πνευματικό & Πολιτιστικό Κέντρο (ΠΠΚ)",
@@ -32,15 +35,16 @@ const SIDEBAR_NEWS = [
 ];
 
 const FOLKLORE = [
-  { href: "/Agios_Nektarios", label: "Άγιος Νεκτάριος" },
-  { href: "/Agios_Fanourios", label: "Άγιος Φανούριος" },
-  { href: "/Agia_Marina", label: "Αγία Μαρίνα" },
-  { href: "/Church-news", label: "Ο ναός μας" },
+  { href: "/Kithaironas", label: "Ο Κιθαιρώνας" },
+  { href: "/Pefko", label: "Το πεύκο" },
+  { href: "/Fotia", label: "Η φωτιά" },
   { href: "/Hercules", label: "Ηρακλής" },
   { href: "/The-Furies", label: "Ερινύες" },
+  { href: "/Eleftheres_Castle", label: "Ελευθερές & Διόνυσος" },
   { href: "/Egosthena_Fortress", label: "Φρούριο Αιγοσθενών" },
-  { href: "/Eleftheres_Castle", label: "Κάστρο Ελευθερών" },
-  { href: "/Under-Construction", label: "Όσιος Μελέτιος & Κιθαιρώνας" },
+  { href: "/Agios_Nektarios", label: "Άγιος Νεκτάριος" },
+  { href: "/Agia_Marina", label: "Αγία Μαρίνα" },
+  { href: "/Agios_Fanourios", label: "Άγιος Φανούριος" },
 ];
 
 type Props = {

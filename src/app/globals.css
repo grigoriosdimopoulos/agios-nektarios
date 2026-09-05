@@ -309,6 +309,115 @@ body {
   margin-bottom: 0.1rem;
 }
 
+/* Photographic plates — cut from the same photograph the background uses, so
+   they belong to the page rather than sit on it. Masked on every edge; no
+   frame, no shadow. */
+.legacy-prose figure.lp-plate {
+  position: relative;
+  margin: 3.2rem 0;
+}
+
+@media (min-width: 900px) {
+  /* Let the plates breathe past the text column. */
+  .legacy-prose figure.lp-plate { margin-inline: -3.5rem; }
+}
+
+.legacy-prose figure.lp-plate img {
+  display: block;
+  width: 100%;
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
+  filter: saturate(0.62) contrast(1.05) brightness(0.78);
+  -webkit-mask-image:
+    linear-gradient(to bottom, transparent 0%, #000 22%, #000 74%, transparent 100%),
+    linear-gradient(to right, transparent 0%, #000 12%, #000 88%, transparent 100%);
+  mask-image:
+    linear-gradient(to bottom, transparent 0%, #000 22%, #000 74%, transparent 100%),
+    linear-gradient(to right, transparent 0%, #000 12%, #000 88%, transparent 100%);
+  -webkit-mask-composite: source-in;
+  mask-composite: intersect;
+}
+
+/* Plates whose sky is already cut out only need their base and flanks softened. */
+.legacy-prose figure.lp-plate--ridge img {
+  filter: saturate(0.5) contrast(1.02) brightness(0.72);
+  -webkit-mask-image:
+    linear-gradient(to bottom, #000 0%, #000 62%, transparent 100%),
+    linear-gradient(to right, transparent 0%, #000 14%, #000 86%, transparent 100%);
+  mask-image:
+    linear-gradient(to bottom, #000 0%, #000 62%, transparent 100%),
+    linear-gradient(to right, transparent 0%, #000 14%, #000 86%, transparent 100%);
+  -webkit-mask-composite: source-in;
+  mask-composite: intersect;
+}
+
+/* A breath of ember over the plate, so it sits in the site's palette. */
+.legacy-prose figure.lp-plate::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: radial-gradient(
+    120% 80% at 50% 40%,
+    rgba(154, 123, 82, 0.09) 0%,
+    transparent 70%
+  );
+}
+
+.legacy-prose figure.lp-plate figcaption {
+  margin-top: 0.4rem;
+  color: rgba(232, 228, 214, 0.42);
+}
+
+@media (min-width: 900px) {
+  .legacy-prose figure.lp-plate figcaption { margin-inline: 3.5rem; }
+}
+
+/* Checklists — the fire-season and winter drills. */
+.legacy-prose ul.lp-check {
+  list-style: none;
+  padding: 0;
+  margin: 1.5rem 0 2.2rem;
+}
+
+.legacy-prose ul.lp-check > li {
+  position: relative;
+  padding-left: 2rem;
+  margin-bottom: 0.95rem;
+}
+
+.legacy-prose ul.lp-check > li::before {
+  content: "";
+  position: absolute;
+  left: 0.15rem;
+  top: 0.72em;
+  width: 0.62rem;
+  height: 0.62rem;
+  border: 1px solid rgba(154, 123, 82, 0.75);
+}
+
+.legacy-prose ul.lp-check > li strong {
+  color: var(--ivory);
+  font-weight: 500;
+}
+
+/* A quiet plaque — for the roll of those who fought the fires. */
+.lp-roll {
+  margin: 2.2rem 0;
+  padding: 1.6rem 1.7rem;
+  border-left: 2px solid rgba(154, 123, 82, 0.5);
+  background: linear-gradient(
+    90deg,
+    rgba(154, 123, 82, 0.05),
+    transparent 70%
+  );
+}
+
+.lp-roll p { margin-bottom: 0.7rem; }
+
+.lp-roll p:last-child { margin-bottom: 0; }
+
 /* Archive grids — newspaper issues, minutes, phone lists. */
 .legacy-prose ul.lp-grid,
 .lp-grid {

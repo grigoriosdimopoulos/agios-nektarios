@@ -20,6 +20,10 @@ const MEDIA_BLOB_KEY = (name: string) => `media/files/${name}`;
 /** Human titles for the legacy pages, shown in the nav and the admin list. */
 export const PAGE_TITLES: Record<string, string> = {
   "readmore-index-center": "Ο οικισμός μας — Συνέχεια",
+  Kithaironas: "Κιθαιρώνας",
+  Pefko: "Το πεύκο",
+  Fotia: "Η φωτιά",
+  Pyroprostasia: "Πυροπροστασία & χειμώνας",
   Newspaper: "Εφημερίδα",
   Weather: "Καιρός",
   Contact: "Επικοινωνία",

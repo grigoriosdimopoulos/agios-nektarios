@@ -14,6 +14,10 @@ export function loadLegacyFragment(filename: string): string {
 
 export const LEGACY_FILES: Record<string, string> = {
   "readmore-index-center": "readmore-index-center.html",
+  Kithaironas: "Kithaironas.html",
+  Pefko: "Pefko.html",
+  Fotia: "Fotia.html",
+  Pyroprostasia: "Pyroprostasia.html",
   Newspaper: "Newspaper.html",
   Weather: "Weather.html",
   Contact: "Contact.html",
