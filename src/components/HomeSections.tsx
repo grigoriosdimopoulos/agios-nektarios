@@ -113,22 +113,29 @@ export function HomeSections({ content }: { content: HomeContent }) {
           </div>
         </div>
 
-        {/* ── Essence ─────────────────────────────────────────────────── */}
+        {/* ── The stanza ──────────────────────────────────────────────── */}
         <SectionTransition className="py-28 text-center md:py-36">
-          <p className={`${ttl} mx-auto max-w-xl text-[1.6rem] leading-[1.42] md:text-[2.05rem]`}>
-            {essence.lineOne}
-            <br />
-            <span className="text-[rgba(232,228,214,0.52)] italic">{essence.lineTwo}</span>
-            <br />
-            {essence.lineThree}
-          </p>
-          <motion.div
-            initial={{ scaleX: 0 }}
-            whileInView={{ scaleX: 1 }}
-            viewport={{ once: true }}
-            transition={{ duration: 1.1, ease: [0.16, 1, 0.3, 1], delay: 0.3 }}
-            className="mx-auto mt-8 h-px w-12 origin-left bg-[rgba(154,123,82,0.35)]"
-          />
+          <blockquote className="mx-auto max-w-3xl">
+            <p className={`${ttl} text-[clamp(0.95rem,4.05vw,1.24rem)] italic leading-[1.9] md:text-[1.62rem] md:leading-[1.78]`}>
+              {essence.lines.map((line, i) => (
+                <span key={i} className="block text-balance">
+                  {line}
+                </span>
+              ))}
+            </p>
+            <motion.div
+              initial={{ scaleX: 0 }}
+              whileInView={{ scaleX: 1 }}
+              viewport={{ once: true }}
+              transition={{ duration: 1.1, ease: [0.16, 1, 0.3, 1], delay: 0.3 }}
+              className="mx-auto mt-9 h-px w-12 origin-left bg-[rgba(154,123,82,0.35)]"
+            />
+            {essence.attribution && (
+              <cite className="mt-6 block font-body text-[0.66rem] not-italic uppercase tracking-[0.26em] text-[rgba(232,228,214,0.34)]">
+                {essence.attribution}
+              </cite>
+            )}
+          </blockquote>
         </SectionTransition>
 
         {/* ── Ο Οικισμός + Χάρτης ─────────────────────────────────────── */}

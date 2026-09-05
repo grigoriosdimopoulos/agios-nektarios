@@ -217,22 +217,56 @@ export function HomeEditor({ initial }: { initial: HomeContent }) {
           </div>
         </Panel>
 
-        <Panel title="Φράση ενότητας">
-          <div className="grid gap-5 md:grid-cols-3">
+        <Panel title="Στροφή">
+          <div className="space-y-3">
+            <span className={labelClass}>Στίχοι</span>
+            {content.essence.lines.map((line, index) => (
+              <div key={index} className="flex items-start gap-3">
+                <input
+                  value={line}
+                  onChange={(event) =>
+                    patch("essence", {
+                      lines: content.essence.lines.map((l, i) =>
+                        i === index ? event.target.value : l,
+                      ),
+                    })
+                  }
+                  className={inputClass}
+                />
+                <RowActions
+                  onRemove={() =>
+                    patch("essence", {
+                      lines: content.essence.lines.filter((_, i) => i !== index),
+                    })
+                  }
+                  onMoveUp={() =>
+                    patch("essence", {
+                      lines: move(content.essence.lines, index, index - 1),
+                    })
+                  }
+                  onMoveDown={() =>
+                    patch("essence", {
+                      lines: move(content.essence.lines, index, index + 1),
+                    })
+                  }
+                />
+              </div>
+            ))}
+            <button
+              type="button"
+              className={ghostButtonClass}
+              onClick={() =>
+                patch("essence", { lines: [...content.essence.lines, ""] })
+              }
+            >
+              + Στίχος
+            </button>
+          </div>
+          <div className="mt-5">
             <Text
-              label="Γραμμή 1"
-              value={content.essence.lineOne}
-              onChange={(lineOne) => patch("essence", { lineOne })}
-            />
-            <Text
-              label="Γραμμή 2 (πλάγια)"
-              value={content.essence.lineTwo}
-              onChange={(lineTwo) => patch("essence", { lineTwo })}
-            />
-            <Text
-              label="Γραμμή 3"
-              value={content.essence.lineThree}
-              onChange={(lineThree) => patch("essence", { lineThree })}
+              label="Απόδοση (ποιητής, τίτλος)"
+              value={content.essence.attribution}
+              onChange={(attribution) => patch("essence", { attribution })}
             />
           </div>
         </Panel>

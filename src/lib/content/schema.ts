@@ -21,7 +21,8 @@ export type HomeContent = {
     ticker: string;
   };
   stats: StatItem[];
-  essence: { lineOne: string; lineTwo: string; lineThree: string };
+  /** A stanza set on its own, mid-page, with its source named beneath. */
+  essence: { lines: string[]; attribution: string };
   settlement: {
     label: string;
     title: string;
@@ -139,7 +140,7 @@ export const DEFAULT_SETTINGS: SiteSettings = {
 };
 
 const TICKER =
-  "ΚΙΘΑΙΡΩΝΑΣ — ΠΕΥΚΟ — ΜΝΗΜΗ — ΒΙΛΙΑ — ΜΥΘΟΣ — ΔΑΣΟΣ — ΚΟΙΝΟΤΗΤΑ — ΒΟΥΝΟ — ";
+  "ΚΙΘΑΙΡΩΝΑΣ — ΠΕΥΚΟ — ΑΝΕΜΟΣ — ΒΙΛΙΑ — ΜΥΘΟΣ — ΔΑΣΟΣ — ΚΟΙΝΟΤΗΤΑ — ΒΟΥΝΟ — ";
 
 export const DEFAULT_HOME: HomeContent = {
   hero: {
@@ -159,9 +160,14 @@ export const DEFAULT_HOME: HomeContent = {
     { value: "130+", label: "Κατοικίες" },
   ],
   essence: {
-    lineOne: "Πεύκο, ασβεστόλιθος, άνεμος.",
-    lineTwo: "Ένα βουνό που καίγεται και ξαναφυτρώνει",
-    lineThree: "όσο του αφήνουμε χρόνο.",
+    lines: [
+      "Τον άνεμο σαν άκουσα μες το δάσος να πλέκει,",
+      "τον ουρανό σαν κοίταξα είδα το σύμπαν όλο,",
+      "είπα ο τόπος αυτός εδώ χίλια καλά πως έχει,",
+      "η φύση ότι μου έδειξε το μυστικό της δώρο.",
+    ],
+    attribution:
+      "Στροφή από το ποίημα του Γρηγόριου Δημοπούλου «Άγιος Νεκτάριος»",
   },
   settlement: {
     label: "Ο τόπος",
@@ -178,7 +184,7 @@ export const DEFAULT_HOME: HomeContent = {
       "https://maps.google.gr/maps?hl=el&ie=UTF8&t=h&ll=38.162535,23.291316&spn=0.01181,0.018239&z=15&source=embed",
   },
   folklore: {
-    label: "Το βουνό, ο μύθος, η μνήμη",
+    label: "Το βουνό, ο μύθος, η ιστορία",
     title: "Όσα κουβαλάει αυτός ο τόπος",
     items: [
       {
