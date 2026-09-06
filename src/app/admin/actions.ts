@@ -18,6 +18,7 @@ import type { ActionState } from "./action-state";
 import { sanitizeHtml, sanitizeText } from "@/lib/sanitizeHtml";
 import {
   deleteMedia,
+  listPageSlugs,
   resetHomeContent,
   resetPageContent,
   saveHomeContent,
@@ -156,6 +157,25 @@ export async function saveHomeAction(
   }
   refresh();
   return { ok: true, message: "Η αρχική σελίδα ενημερώθηκε." };
+}
+
+/**
+ * Puts the whole site back to the texts and photographs that ship with it.
+ * Deleting each stored document is enough: reads fall through to the defaults.
+ */
+export async function resetEverythingAction(): Promise<ActionState> {
+  await requireSession();
+  try {
+    await resetHomeContent();
+    for (const slug of listPageSlugs()) await resetPageContent(slug);
+  } catch (error) {
+    return { ok: false, message: `Αποτυχία επαναφοράς: ${(error as Error).message}` };
+  }
+  refresh();
+  return {
+    ok: true,
+    message: "Όλα τα κείμενα και οι φωτογραφίες επανήλθαν στην αρχική τους μορφή.",
+  };
 }
 
 export async function resetHomeAction(): Promise<ActionState> {

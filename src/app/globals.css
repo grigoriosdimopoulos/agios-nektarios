@@ -442,6 +442,42 @@ body {
   .legacy-prose figure.lp-pair > figcaption { margin-inline: 3.5rem; }
 }
 
+/* Two photographs side by side, each with its own caption. */
+.legacy-prose figure.lp-duo { margin: 3rem 0; }
+
+@media (min-width: 900px) {
+  .legacy-prose figure.lp-duo { margin-inline: -3.5rem; }
+}
+
+.lp-duo-grid {
+  display: grid;
+  gap: 0.8rem;
+  grid-template-columns: 1fr;
+  align-items: start;
+}
+
+@media (min-width: 640px) {
+  .lp-duo-grid { grid-template-columns: 1fr 1fr; }
+}
+
+.lp-duo-grid img {
+  display: block;
+  width: 100%;
+  /* One shared crop so the pair reads as a pair, whatever each camera gave us. */
+  aspect-ratio: 4 / 3;
+  object-fit: cover;
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
+}
+
+.lp-duo-grid figcaption {
+  margin-top: 0.6rem;
+  font-size: 0.76rem;
+  line-height: 1.6;
+  color: rgba(232, 228, 214, 0.46);
+}
+
 /* Credit line under an image — quieter than the caption above it. */
 .lp-credit {
   display: block;

@@ -7,6 +7,7 @@ import {
   listPageSlugs,
 } from "@/lib/content";
 import { getSession } from "@/lib/session";
+import { ResetEverything } from "./ResetEverything";
 import { Panel } from "./ui";
 
 export const dynamic = "force-dynamic";
@@ -108,6 +109,7 @@ export default async function AdminHome() {
               .join(", ")}
           </p>
         )}
+        <ResetEverything editedCount={edited.size} />
       </Panel>
     </>
   );
