@@ -119,7 +119,11 @@ export async function resetPageAction(
   formData: FormData,
 ): Promise<ActionState> {
   await requireSession();
-  await resetPageContent(String(formData.get("slug") ?? ""));
+  try {
+    await resetPageContent(String(formData.get("slug") ?? ""));
+  } catch (error) {
+    return { ok: false, message: `Αποτυχία επαναφοράς: ${(error as Error).message}` };
+  }
   refresh();
   return { ok: true, message: "Επαναφορά στο αρχικό κείμενο." };
 }
@@ -156,7 +160,11 @@ export async function saveHomeAction(
 
 export async function resetHomeAction(): Promise<ActionState> {
   await requireSession();
-  await resetHomeContent();
+  try {
+    await resetHomeContent();
+  } catch (error) {
+    return { ok: false, message: `Αποτυχία επαναφοράς: ${(error as Error).message}` };
+  }
   refresh();
   return { ok: true, message: "Η αρχική σελίδα επανήλθε στις αρχικές τιμές." };
 }

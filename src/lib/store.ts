@@ -6,6 +6,13 @@
  *
  * The adapter is resolved lazily and memoised so a missing @netlify/blobs
  * install (or running outside Netlify) silently falls back to the filesystem.
+ *
+ * The Blobs *client*, however, is deliberately NOT memoised. Netlify injects
+ * short-lived credentials into the environment, so a client built once and kept
+ * on a warm serverless instance starts failing with "Token expired" after an
+ * hour or so — which is exactly what an editor hits when they leave the admin
+ * page open and then press save. Building a client per call is cheap and always
+ * reads the credentials that are valid right now.
  */
 import fs from "node:fs/promises";
 import path from "node:path";
@@ -92,19 +99,64 @@ function fileStore(): ContentStore {
 
 type NetlifyStore = import("@netlify/blobs").Store;
 
-function netlifyStore(store: NetlifyStore): ContentStore {
+const STORE_NAME = "agios-nektarios-content";
+
+/**
+ * A long-lived personal access token, if one is configured. Without it we rely
+ * on the credentials Netlify injects per request, which expire.
+ */
+function explicitCredentials(): { siteID: string; token: string } | null {
+  const siteID = process.env.NETLIFY_SITE_ID ?? process.env.SITE_ID;
+  const token = process.env.NETLIFY_BLOBS_TOKEN ?? process.env.NETLIFY_API_TOKEN;
+  return siteID && token ? { siteID, token } : null;
+}
+
+/** A client built from whatever credentials are valid at this moment. */
+async function freshStore(): Promise<NetlifyStore> {
+  const { getStore } = await import("@netlify/blobs");
+  const credentials = explicitCredentials();
+  return getStore({
+    name: STORE_NAME,
+    consistency: "strong",
+    ...(credentials ?? {}),
+  });
+}
+
+/** Turns the SDK's cryptic credential errors into something an editor can act on. */
+function describeFailure(error: unknown): Error {
+  const message = error instanceof Error ? error.message : String(error);
+  if (/token|credential|unauthor|expired|403|401/i.test(message)) {
+    return new Error(
+      "Η αποθήκευση απέτυχε: τα διαπιστευτήρια του Netlify Blobs έληξαν. " +
+        "Ορίστε NETLIFY_SITE_ID και NETLIFY_API_TOKEN στις μεταβλητές " +
+        "περιβάλλοντος του Netlify και κάντε redeploy. " +
+        `(${message})`,
+    );
+  }
+  return error instanceof Error ? error : new Error(message);
+}
+
+async function withStore<T>(run: (store: NetlifyStore) => Promise<T>): Promise<T> {
+  try {
+    return await run(await freshStore());
+  } catch (error) {
+    throw describeFailure(error);
+  }
+}
+
+function netlifyStore(): ContentStore {
   return {
     async readJSON<T>(key: string) {
-      const value = await store.get(safeKey(key), { type: "json" });
+      const value = await withStore((s) => s.get(safeKey(key), { type: "json" }));
       return (value as T) ?? null;
     },
     async writeJSON(key, value) {
-      await store.setJSON(safeKey(key), value);
+      await withStore((s) => s.setJSON(safeKey(key), value));
     },
     async readBlob(key) {
-      const entry = await store.getWithMetadata(safeKey(key), {
-        type: "arrayBuffer",
-      });
+      const entry = await withStore((s) =>
+        s.getWithMetadata(safeKey(key), { type: "arrayBuffer" }),
+      );
       if (!entry?.data) return null;
       return {
         body: Buffer.from(entry.data),
@@ -115,13 +167,17 @@ function netlifyStore(store: NetlifyStore): ContentStore {
       };
     },
     async writeBlob(key, body, contentType) {
-      await store.set(safeKey(key), toArrayBuffer(body), {
-        metadata: { contentType },
-      });
+      await withStore((s) =>
+        s.set(safeKey(key), toArrayBuffer(body), { metadata: { contentType } }),
+      );
     },
-    remove: (key) => store.delete(safeKey(key)),
+    async remove(key) {
+      await withStore((s) => s.delete(safeKey(key)));
+    },
     async list(prefix) {
-      const { blobs } = await store.list({ prefix: `${safeKey(prefix)}/` });
+      const { blobs } = await withStore((s) =>
+        s.list({ prefix: `${safeKey(prefix)}/` }),
+      );
       return blobs.map((b) => b.key);
     },
   };
@@ -142,10 +198,8 @@ async function resolveStore(): Promise<ContentStore> {
   if (!onNetlify) return fileStore();
 
   try {
-    const { getStore } = await import("@netlify/blobs");
-    return netlifyStore(
-      getStore({ name: "agios-nektarios-content", consistency: "strong" }),
-    );
+    await import("@netlify/blobs");
+    return netlifyStore();
   } catch (error) {
     console.warn("[store] Netlify Blobs unavailable, using filesystem:", error);
     return fileStore();

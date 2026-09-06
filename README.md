@@ -38,9 +38,17 @@ npm run dev
 | `ADMIN_SESSION_SECRET` | συνιστάται | Τυχαία συμβολοσειρά ≥ 16 χαρακτήρων για την υπογραφή του cookie |
 | `ADMIN_PASSWORD` | εναλλακτικά¹ | Κωδικός σε απλό κείμενο — λιγότερο ασφαλές |
 | `CONTENT_DATA_DIR` | όχι | Φάκελος αποθήκευσης εκτός Netlify (προεπιλογή `.data`) |
+| `NETLIFY_SITE_ID` | συνιστάται² | Το Site ID (Site configuration → General) |
+| `NETLIFY_API_TOKEN` | συνιστάται² | Personal access token με δικαίωμα εγγραφής στα Blobs |
 
 ¹ Χρειάζεται ένα από τα δύο. Χωρίς αυτά η σύνδεση απορρίπτεται και η σελίδα
 σύνδεσης το εξηγεί.
+
+² Χωρίς αυτά η αποθήκευση στηρίζεται στα προσωρινά διαπιστευτήρια που εισάγει
+το Netlify σε κάθε αίτημα. Λειτουργούν, αλλά λήγουν: αν η φόρμα του διαχειριστή
+μείνει ανοιχτή για ώρα, η αποθήκευση αποτυγχάνει με «Token expired». Με μόνιμο
+token το πρόβλημα εξαφανίζεται. Το token δημιουργείται στο
+[User settings → Applications → Personal access tokens](https://app.netlify.com/user/applications).
 
 Δημιουργία hash:
 
