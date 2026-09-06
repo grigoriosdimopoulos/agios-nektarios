@@ -42,3 +42,6 @@ next-env.d.ts
 
 # Local content store (development fallback for Netlify Blobs)
 /.data
+
+# Generated review spreadsheet — rebuild with scripts/build_review_sheet.py
+/Άγιος_Νεκτάριος_κείμενα.xlsx
